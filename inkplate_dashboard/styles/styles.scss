@@ -1,0 +1,214 @@
+/* Fonts */
+@font-face {
+  font-family: "Open Sans";
+  font-style: normal;
+  font-display: block;
+  font-weight: 300;
+  src: url(./fonts/open-sans-latin-300-normal.woff2) format("woff2"), url(./fonts/open-sans-latin-300-normal.woff) format("woff");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Noto Serif";
+  font-style: normal;
+  font-display: block;
+  font-weight: 700;
+  src: url(./fonts/noto-serif-latin-700-normal.woff2) format("woff2"), url(./fonts/noto-serif-latin-700-normal.woff) format("woff");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Roboto Condensed";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url(./fonts/roboto-condensed-latin-400-normal.woff2) format("woff2"), url(./fonts/roboto-condensed-latin-400-normal.woff) format("woff");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+body {
+  margin: 0;
+}
+
+// Font configuration
+$font-size-default: 25px;
+$font-size-large: 30px;
+$font-size-huge: 40px;
+$font-size-current-temp: 60px;
+$font-family-serif: "Noto Serif", serif;
+$font-family-default: "Open Sans", serif;
+$font-family-temp: "Roboto Condensed", sans-serif;
+
+// Configuration for the rounded background
+$display-background: #000;
+$display-padding: 5px;
+$display-text-color: #fff;
+
+// Configuration for the inner background
+$content-background: rgb(200, 200, 200);
+$content-border-radius: 12px;
+
+// Configuration for widgets
+$widget-background: #fff;
+$widget-border: 1px solid rgb(130, 130, 130);
+$widget-border-radius: 8px;
+$widget-spacing: 14px;
+$widget-inner-padding: 14px;
+
+// Layout
+#display {
+  background: $display-background;
+  padding: $display-padding;
+  font-size: $font-size-default;
+  font-family: $font-family-default;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-weight: 300;
+}
+
+#content {
+  background: $content-background;
+  padding: $widget-spacing/2;
+  border-radius: $content-border-radius;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: row;
+}
+
+.column {
+  flex: 2;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.widget {
+  background: $widget-background;
+  border: $widget-border;
+  border-radius: $widget-border-radius;
+  margin: $widget-spacing/2;
+  overflow: hidden;
+}
+
+// Date
+#header {
+  font-family: $font-family-serif;
+  font-size: $font-size-large;
+  color: $display-text-color;
+  font-weight: 700;
+  padding: $widget-spacing/2 0 $widget-spacing/2 $widget-inner-padding+$widget-spacing;
+}
+
+/* News Widget */
+.widget-headlines {
+  @extend .widget;
+  flex: 1 0 0%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  .content {
+    margin: $widget-inner-padding;
+    display: -webkit-box;
+    -webkit-line-clamp: 11;
+    -webkit-box-orient: vertical;  
+    overflow: hidden;
+
+    h1 {
+      font-family: $font-family-serif;
+      font-size: $font-size-default;
+      margin: 0 0 $widget-inner-padding 0;
+      flex-shrink: 0;
+    }  
+  }
+}
+
+/* News Widget */
+.widget-large-headline {
+  @extend .widget;
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+
+  .image {
+    flex-grow: 1;
+    background-size: cover;
+    background-position: center center;
+  }
+
+  .content {
+    margin: $widget-inner-padding;
+    font-size: $font-size-large;
+
+    display: -webkit-box;
+    -webkit-line-clamp: 10;
+    -webkit-box-orient: vertical;  
+    overflow: hidden;
+
+    h1 {
+      margin: 0 0 $widget-inner-padding 0;
+      font-family: $font-family-serif;
+      font-weight: 700;
+      font-size: $font-size-huge;
+    }
+  }
+}
+
+.widget-large-headline-smaller {
+  .content {
+    font-size: $font-size-default;
+
+    h1 {
+      font-size: $font-size-large;
+    }
+  }
+}
+
+/* Weather */
+.widget-weather {
+  @extend .widget;
+  display: flex;
+  flex-direction: column;
+
+  .widget-weather-current {
+    display: flex;
+
+    .widget-weather-current-icon {
+      height: 110px;
+      width: 110px;
+      filter: brightness(80%); /* Not very readable on inkplate otherwise */
+      margin: $widget-inner-padding;
+    }
+
+    .widget-weather-current-details {
+      flex: 1;
+      margin: $widget-inner-padding;
+    }
+
+    .widget-weather-current-temperature {
+      font-family: $font-family-temp;
+      font-size: $font-size-current-temp;
+      font-weight: 300;
+    }
+  }
+
+  .widget-weather-table {
+    border-top: $widget-border;
+    padding: $widget-inner-padding 0;
+    display: flex;
+    justify-content: space-evenly;
+    text-align: center;
+
+    img {
+      margin-top: 5px;
+      width: 60px;
+      height: 60px;
+      filter: brightness(80%); /* Not very readable on inkplate otherwise */
+    }
+
+    .widget-weather-table-temp {
+      font-family: $font-family-temp;
+      font-weight: 300;
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{% from 'widget-headlines.html' import widget_headlines %}
+{% from 'widget-large-headline.html' import widget_large_headline %}
+{% from 'widget-weather.html' import widget_weather %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>e-paper display</title>
+    <link rel="stylesheet" type="text/css" href="/static/styles.css">
+  </head>
+  <body>
+    <div id="display" style="width: {{ data.config.width }}px; height: {{ data.config.height}}px;">
+      <div id="header">{{ data.date }}</div>
+      <div id="content">
+        {{ widget_large_headline(data.headlines[0]) }}
+        <div class="column">
+            {{ widget_weather(data.weather) }}
+            {{ widget_headlines(data.headlines[1:]) }}
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
