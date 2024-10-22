@@ -10,6 +10,18 @@ from an RSS feed and the current weather, provided by the
 The server generates the dashboard as an HTML page, and uses Chrome to
 screenshot it and generate a PNG which can be sent to the Inkplate 10.
 
+### Docker quickstart
+
+```
+docker run -v $(pwd)/config.example.toml:/app/config.toml:ro \
+    -p 8000:8000 \
+    ugomeda/inkplate-dashboard:latest
+```
+
+Then access:
+
+- Live HTML version: http://localhost:8000/live/html
+- Live PNG version: http://localhost:8000/live/png
 
 ### Quick setup
 
@@ -31,15 +43,14 @@ uvicorn inkplate_dashboard.app:app
 
 You should be able to access the dashboard on the following URLs:
 
-- Live HTML version: http://localhost:8000/live/png
+- Live HTML version: http://localhost:8000/live/html
 - Live PNG version: http://localhost:8000/live/png
-- Cached PNG version: http://localhost:8000/
 
 Note: if chrome is not found, update the paths in `inkplate_dashboard/chrome.py`
 
 ### Docker setup
 
-To build and run locally:
+You can also build the image locally:
 
 ```
 docker build -t inkplate_dashboard .
