@@ -66,7 +66,7 @@ def get_weather(display: DisplayConfiguration) -> list[WeatherObservation]:
                 temperature = f"{round(celcius_to_fahrenheit(temperature_celcius))}°"
                 wind_speed = f"{round(wind_speed_mps * 2.237)}mph"
                 if rain_mm > 0:
-                    rain = f"{rain_mm/25.4:.3f}in"
+                    rain = f"{rain_mm / 25.4:.3f}in"
             else:
                 raise Exception("Unexpected unit type")
 
