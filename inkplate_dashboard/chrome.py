@@ -1,3 +1,4 @@
+import hashlib
 import io
 import itertools
 import os
@@ -5,8 +6,6 @@ import subprocess
 import tempfile
 
 from PIL import Image
-
-from inkplate_dashboard.config import DisplayConfiguration
 
 GOOGLE_CHROME_PATHS = [
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
@@ -22,7 +21,10 @@ def get_chrome_path() -> str:
     raise Exception("Could not find Chrome/Chromium path")
 
 
-def screenshot_display(display: DisplayConfiguration) -> bytes:
+def screenshot_display() -> tuple[bytes, str]:
+    """Makes a screenshot of the html view and return the PNG
+    image and a hash.
+    """
     with tempfile.TemporaryDirectory() as tmp_dir:
         screenshot_path = os.path.join(tmp_dir, "screenshot.png")
         subprocess.run(
@@ -37,10 +39,11 @@ def screenshot_display(display: DisplayConfiguration) -> bytes:
                 f"--screenshot={screenshot_path}",
                 "--window-size=825,1200",
                 "--virtual-time-budget=10000",
-                "--timeout=10000",  # load fonts
+                "--timeout=5000",
                 "http://127.0.0.1:8000/live/html",
             ],
             check=False,
+            timeout=10,
         )
 
         # Reduce the palette to 8 colors to reduce file size and control
@@ -63,7 +66,9 @@ def screenshot_display(display: DisplayConfiguration) -> bytes:
         img = img.quantize(kmeans=0, palette=palette_img).convert("L")
         img = img.rotate(90, expand=1)
 
+        hash = hashlib.sha256(img.tobytes()).hexdigest()
+
         output = io.BytesIO()
         img.save(output, "png")
 
-        return output.getvalue()
+        return output.getvalue(), hash

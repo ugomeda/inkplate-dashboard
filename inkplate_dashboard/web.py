@@ -30,7 +30,5 @@ class DisplayHtmlEndpoint(HTTPEndpoint):
 
 class DisplayPngEndpoint(HTTPEndpoint):
     async def get(self, request: Request) -> PlainTextResponse:
-        return PlainTextResponse(
-            await run_in_threadpool(screenshot_display, request.app.display),
-            media_type="image/png",
-        )
+        image, _hash = await run_in_threadpool(screenshot_display)
+        return PlainTextResponse(image, media_type="image/png")
