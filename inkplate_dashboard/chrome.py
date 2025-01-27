@@ -37,7 +37,9 @@ def screenshot_display() -> tuple[bytes, str]:
                 "--force-device-scale-factor=1",
                 "--disable-lcd-text",  # B&W display
                 f"--screenshot={screenshot_path}",
-                "--window-size=825,1200",
+                # chromium seems to eat the bottom of the page,
+                # we add some padding which is cut later
+                "--window-size=825,1500",
                 "--virtual-time-budget=10000",
                 "--timeout=5000",
                 "http://127.0.0.1:8000/live/html",
@@ -63,6 +65,7 @@ def screenshot_display() -> tuple[bytes, str]:
         palette_img = Image.new("P", (1, 1))
         palette_img.putpalette(palette * 32)
         img = Image.open(screenshot_path).convert("RGB")
+        img = img.crop((0, 0, 825, 1200))
         img = img.quantize(kmeans=0, palette=palette_img).convert("L")
         img = img.rotate(90, expand=1)
 
