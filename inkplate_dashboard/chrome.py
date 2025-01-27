@@ -30,7 +30,7 @@ def screenshot_display() -> tuple[bytes, str]:
         subprocess.run(
             [
                 get_chrome_path(),
-                "--headless=old",
+                "--headless=new",
                 "--disable-gpu",
                 "--high-dpi-support=1",
                 "--no-sandbox",
