@@ -12,8 +12,12 @@ screenshot it and generate a PNG which can be sent to the Inkplate 10.
 
 ### Docker quickstart
 
+An image is provided on [dockerhub](https://hub.docker.com/r/ugomeda/inkplate-dashboard):
+
 ```
-docker run -v $(pwd)/config.example.toml:/app/config.toml:ro \
+docker run \
+    --pull always \
+    -v $(pwd)/config.example.toml:/app/config.toml:ro \
     -p 8000:8000 \
     ugomeda/inkplate-dashboard:latest
 ```
@@ -23,7 +27,7 @@ Then access:
 - Live HTML version: http://localhost:8000/live/html
 - Live PNG version: http://localhost:8000/live/png
 
-### Quick setup
+### Run locally
 
 For a local setup, you will need Google Chrome or Chromium installed
 on your machine.
@@ -48,13 +52,11 @@ You should be able to access the dashboard on the following URLs:
 
 Note: if chrome is not found, update the paths in `inkplate_dashboard/chrome.py`
 
-### Docker setup
+## Assets
 
-You can also build the image locally:
+This projets uses:
 
-```
-docker build -t inkplate_dashboard .
-docker run -v $(pwd)/config.example.toml:/app/config.toml:ro \
-    -p 8000:8000 \
-    inkplate_dashboard
-```
+- Weather icons: https://github.com/nrkno/yr-weather-symbols
+- Icons: https://github.com/feathericons/feather
+- textFit: https://github.com/STRML/textFit
+- Fonts: https://github.com/fontsource

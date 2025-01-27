@@ -6,13 +6,13 @@
             <div class="widget-weather-current-temperature">{{ weather[0].temperature }}</div>
             <div>
                 <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <use href="/static/icons/feather-sprite.svg#wind" />
+                    <use href="/static/icons/feather/feather-sprite.svg#wind" />
                 </svg> {{ weather[0].wind }}
             </div>
             {% if weather[0].rain %}
             <div>
                 <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <use href="/static/icons/feather-sprite.svg#umbrella" />
+                    <use href="/static/icons/feather/feather-sprite.svg#umbrella" />
                 </svg> {{ weather[0].rain }}
             </div>
             {% endif %}
