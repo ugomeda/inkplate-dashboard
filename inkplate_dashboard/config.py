@@ -11,8 +11,6 @@ class UnitEnum(str, Enum):
 
 
 class DisplayConfiguration(BaseModel):
-    width: int
-    height: int
     rss_url: HttpUrl
     location: tuple[float, float]
     locale: str

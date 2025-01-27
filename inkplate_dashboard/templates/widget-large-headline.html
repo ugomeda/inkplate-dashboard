@@ -1,9 +1,0 @@
-{% macro widget_large_headline(headline) %}
-<div class="widget-large-headline{% if headline.is_long() %} widget-large-headline-smaller{% endif %}">
-    <div class="image" style="background-image: url('data:image/png;base64,{{ headline.get_image() }}')"></div> 
-    <div class="content">
-        <h1 class="headline-title">{{ headline.title }}</h1>
-        <div class="headline-content">{{ headline.description }}</div>
-    </div>
-</div>
-{% endmacro %}

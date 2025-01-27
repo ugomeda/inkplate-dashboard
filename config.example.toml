@@ -1,6 +1,4 @@
 [display]
-width = 1200
-height = 825
 rss_url = "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml"
 location = [40.75, -73.99]
 timezone = "America/New_York"

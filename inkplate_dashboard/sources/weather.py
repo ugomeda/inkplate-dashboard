@@ -29,11 +29,12 @@ def get_weather(display: DisplayConfiguration) -> list[WeatherObservation]:
     # Fetch JSON
     request = requests.get(
         MET_API_URL,
-        headers={"user-agent": "inkplate-dashboard meda.ugo@gmail.com"},
+        headers={"user-agent": "github.com/ugomeda/inkplate-dashboard"},
         params={
             "lat": f"{display.location[0]:.2f}",
             "lon": f"{display.location[1]:.2f}",
         },
+        timeout=3,
     )
     request.raise_for_status()
     data = request.json()

@@ -1,13 +1,20 @@
 {% macro widget_headlines(headlines) %}
 <div class="widget-headlines">
-    <div class="content">
-        <h1>{{ headlines[1].title }}</h1>
-        {{ headlines[1].description }}
+    <div class="widget-headlines-inner">
+        <article>
+            <h2>{{ headlines[0].title }}</h2>
+            <div class="widget-headlines-content">
+                <div class="widget-headlines-illustration" style="background-image: url('data:image/png;base64,{{ headlines[0].get_image() }}')"></div>
+                <div class="widget-headlines-description">{{ headlines[0].description }}</div>
+            </div>
+        </article>
+        <article>
+            <h2>{{ headlines[1].title }}</h2>
+            <div class="widget-headlines-content">
+                <div class="widget-headlines-illustration" style="background-image: url('data:image/png;base64,{{ headlines[1].get_image() }}')"></div>
+                <div class="widget-headlines-description">{{ headlines[1].description }}</div>
+            </div>
+        </article>
     </div>
-    <!-- <div class="widget-headlines-inner">
-{% for headline in headlines %}
-        <div class="widget-headlines-title">{{ headline.title }}</div>
-{% endfor %}
-    </div> -->
 </div>
 {% endmacro %}

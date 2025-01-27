@@ -1,28 +1,29 @@
 {% macro widget_weather(weather) %}
 <div class="widget-weather">
     <div class="widget-weather-current">
-        <img class="widget-weather-current-icon" src="/static/icons/weather/{{ weather[0].icon }}.svg">
-        <div class="widget-weather-current-details">
-            <div class="widget-weather-current-temperature">{{ weather[0].temperature }}</div>
-            <div class="widget-weather-current-other">
-                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <use href="/static/icons/feather-sprite.svg#wind" />
-                </svg>
-                {{ weather[0].wind }}
-                {% if weather[0].rain %}&nbsp;<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <use href="/static/icons/feather-sprite.svg#umbrella" />
-                </svg> {{ weather[0].rain }}{% endif %}
-            </div>
-        </div>
-    </div>
-    <div class="widget-weather-table">
-{% for observation in weather[1:5] %}
+        <img src="/static/icons/weather/{{ weather[0].icon }}.svg">
         <div>
-            <div>{{ observation.date_short_locale }}</div>
-            <img src="/static/icons/weather/{{ observation.icon }}.svg">
-            <div class="widget-weather-table-temp">{{ observation.temperature }}</div>
+            <div class="widget-weather-current-temperature">{{ weather[0].temperature }}</div>
+            <div>
+                <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <use href="/static/icons/feather-sprite.svg#wind" />
+                </svg> {{ weather[0].wind }}
+            </div>
+            {% if weather[0].rain %}
+            <div>
+                <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <use href="/static/icons/feather-sprite.svg#umbrella" />
+                </svg> {{ weather[0].rain }}
+            </div>
+            {% endif %}
         </div>
-{% endfor %}
     </div>
+{% for observation in weather[1:4] %}
+    <div class="widget-weather-next">
+        <div>{{ observation.date_short_locale }}</div>
+        <img src="/static/icons/weather/{{ observation.icon }}.svg">
+        <div class="widget-weather-table-temp">{{ observation.temperature }}</div>
+    </div>
+{% endfor %}
 </div>
 {% endmacro %}
