@@ -57,6 +57,6 @@ Note: if chrome is not found, update the paths in `inkplate_dashboard/chrome.py`
 This projets uses:
 
 - Weather icons: https://github.com/nrkno/yr-weather-symbols
-- Icons: https://github.com/feathericons/feather
+- Icons: https://github.com/lucide-icons/lucide
 - textFit: https://github.com/STRML/textFit
 - Fonts: https://github.com/fontsource
