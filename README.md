@@ -40,7 +40,7 @@ To run the server:
 cp config.exemple.toml config.toml
 poetry shell
 poetry install
-playwright install chromium --no-shell
+playwright install chromium --no-shell --with-deps
 uvicorn inkplate_dashboard.app:app
 ```
 

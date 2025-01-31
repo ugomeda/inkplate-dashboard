@@ -37,14 +37,13 @@ ARG PYTHON_VERSION
 RUN apt-get update \
     && apt-get install --no-install-recommends -y \
         python${PYTHON_VERSION} \
-        chromium \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY --from=builder /app/venv/ /app/venv/
-RUN ["/app/venv/bin/python3", "-m", "playwright", "install", "chromium", "--no-shell"]
+RUN ["/app/venv/bin/python3", "-m", "playwright", "install", "chromium", "--no-shell", "--with-deps"]
 
 COPY inkplate_dashboard /app/inkplate_dashboard
 
