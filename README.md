@@ -49,8 +49,6 @@ You should be able to access the dashboard on the following URLs:
 - Live HTML version: http://localhost:8000/live/html
 - Live PNG version: http://localhost:8000/live/png
 
-Note: if chrome is not found, update the paths in `inkplate_dashboard/chrome.py`
-
 ## Assets
 
 This projets uses:
