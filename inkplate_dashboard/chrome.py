@@ -44,7 +44,7 @@ def screenshot_display() -> tuple[bytes, str]:
                 "--timeout=5000",
                 "http://127.0.0.1:8000/live/html",
             ],
-            check=False,
+            check=True,
             timeout=10,
         )
 
