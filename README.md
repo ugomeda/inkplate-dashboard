@@ -7,7 +7,7 @@ from an RSS feed and the current weather, provided by the
 
 ## Server
 
-The server generates the dashboard as an HTML page, and uses Chrome to
+The server generates the dashboard as an HTML page, and uses Chromium to
 screenshot it and generate a PNG which can be sent to the Inkplate 10.
 
 ### Docker quickstart
@@ -29,19 +29,18 @@ Then access:
 
 ### Run locally
 
-For a local setup, you will need Google Chrome or Chromium installed
-on your machine.
-
 To run the server:
 
 - Create a stub configuration by copying `config.example.toml` to `config.toml`
 - Setup your poetry environment
+- Install Chromium
 - Run the application
 
 ```
 cp config.exemple.toml config.toml
 poetry shell
 poetry install
+playwright install chromium --no-shell
 uvicorn inkplate_dashboard.app:app
 ```
 

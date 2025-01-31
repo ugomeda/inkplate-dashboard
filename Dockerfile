@@ -44,6 +44,8 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY --from=builder /app/venv/ /app/venv/
+RUN ["/app/venv/bin/python3", "-m", "playwright", "install", "chromium", "--no-shell"]
+
 COPY inkplate_dashboard /app/inkplate_dashboard
 
 CMD ["/app/venv/bin/python3", "-m", "uvicorn", "inkplate_dashboard.app:app", "--host", "0.0.0.0"]

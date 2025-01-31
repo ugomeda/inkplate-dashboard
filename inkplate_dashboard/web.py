@@ -6,7 +6,6 @@ from starlette.endpoints import HTTPEndpoint
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, PlainTextResponse
 
-from inkplate_dashboard.chrome import screenshot_display
 from inkplate_dashboard.display import generate_html
 
 
@@ -30,5 +29,5 @@ class DisplayHtmlEndpoint(HTTPEndpoint):
 
 class DisplayPngEndpoint(HTTPEndpoint):
     async def get(self, request: Request) -> PlainTextResponse:
-        image, _hash = await run_in_threadpool(screenshot_display)
+        image, _hash = await request.state.chromium.screenshot()
         return PlainTextResponse(image, media_type="image/png")

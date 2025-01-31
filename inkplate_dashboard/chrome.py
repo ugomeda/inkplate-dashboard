@@ -1,77 +1,67 @@
+import asyncio
+import contextlib
 import hashlib
 import io
 import itertools
-import os
-import subprocess
-import tempfile
+from collections.abc import AsyncIterator
+from dataclasses import dataclass
 
 from PIL import Image
-
-GOOGLE_CHROME_PATHS = [
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-    "/usr/bin/chromium",
-]
+from playwright.async_api import Browser, async_playwright
+from starlette.applications import Starlette
 
 
-def get_chrome_path() -> str:
-    for chrome_path in GOOGLE_CHROME_PATHS:
-        if os.path.exists(chrome_path):
-            return chrome_path
-
-    raise Exception("Could not find Chrome/Chromium path")
-
-
-def screenshot_display() -> tuple[bytes, str]:
-    """Makes a screenshot of the html view and return the PNG
-    image and a hash.
-    """
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        screenshot_path = os.path.join(tmp_dir, "screenshot.png")
-        subprocess.run(
-            [
-                get_chrome_path(),
-                "--headless=new",
-                "--disable-gpu",
-                "--high-dpi-support=1",
-                "--no-sandbox",
-                "--force-device-scale-factor=1",
-                "--disable-lcd-text",  # B&W display
-                f"--screenshot={screenshot_path}",
-                # chromium seems to eat the bottom of the page,
-                # we add some padding which is cut later
-                "--window-size=825,1500",
-                "--virtual-time-budget=10000",
-                "--timeout=5000",
-                "http://127.0.0.1:8000/live/html",
-            ],
-            check=True,
-            timeout=10,
-        )
-
-        # Reduce the palette to 8 colors to reduce file size and control
-        # dithering
-        palette = list(
-            itertools.chain(
-                *[
-                    [
-                        round((i + 1 / 2) * (256 / 8)),
-                        round((i + 1 / 2) * (256 / 8)),
-                        round((i + 1 / 2) * (256 / 8)),
-                    ]
-                    for i in range(8)
+def _convert_image(screenshot: bytes) -> tuple[bytes, str]:
+    # Reduce the palette to 8 colors to reduce file size and control
+    # dithering
+    palette = list(
+        itertools.chain(
+            *[
+                [
+                    round((i + 1 / 2) * (256 / 8)),
+                    round((i + 1 / 2) * (256 / 8)),
+                    round((i + 1 / 2) * (256 / 8)),
                 ]
-            )
+                for i in range(8)
+            ]
         )
-        palette_img = Image.new("P", (1, 1))
-        palette_img.putpalette(palette * 32)
-        img = Image.open(screenshot_path).convert("RGB")
-        img = img.crop((0, 0, 825, 1200))
-        img = img.quantize(kmeans=0, palette=palette_img).convert("L")
-        img = img.rotate(90, expand=1)
+    )
+    palette_img = Image.new("P", (1, 1))
+    palette_img.putpalette(palette * 32)
+    img = Image.open(io.BytesIO(screenshot)).convert("RGB")
+    img = img.crop((0, 0, 825, 1200))
+    img = img.quantize(kmeans=0, palette=palette_img).convert("L")
+    img = img.rotate(90, expand=1)
 
-        hash = hashlib.sha256(img.tobytes()).hexdigest()
+    hash = hashlib.sha256(img.tobytes()).hexdigest()
 
-        output = io.BytesIO()
-        img.save(output, "png")
+    output = io.BytesIO()
+    img.save(output, "png")
 
-        return output.getvalue(), hash
+    return output.getvalue(), hash
+
+
+@dataclass
+class ChromiumInstance:
+    browser: Browser
+
+    async def screenshot(self) -> tuple[bytes, str]:
+        page = await self.browser.new_page(viewport={"width": 825, "height": 1200})
+        try:
+            await page.goto("http://127.0.0.1:8000/live/html", timeout=5000)
+            screenshot = await page.screenshot()
+        finally:
+            await page.close()
+
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, _convert_image, screenshot)
+
+
+@contextlib.asynccontextmanager
+async def chrome_lifespan(app: Starlette) -> AsyncIterator[dict[str, ChromiumInstance]]:
+    async with async_playwright() as playwright:
+        browser = await playwright.chromium.launch(
+            channel="chromium",
+            args=["--disable-lcd-text", "--high-dpi-support=1", "--disable-gpu"],
+        )
+        yield {"chromium": ChromiumInstance(browser)}
