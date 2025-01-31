@@ -16,12 +16,12 @@
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
-  font-family: "Roboto Condensed";
+  font-family: 'Roboto Condensed Variable';
   font-style: normal;
   font-display: block;
-  font-weight: 400;
-  src: url(./fonts/roboto-condensed-latin-400-normal.woff2) format("woff2"), url(./fonts/roboto-condensed-latin-400-normal.woff) format("woff");
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  font-weight: 100 900;
+  src: url(./fonts/roboto-condensed-latin-wght-normal.woff2) format('woff2-variations');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
 }
 
 // Font configuration
@@ -30,7 +30,7 @@ $font-size-huge: 40px;
 $font-size-current-temp: 70px;
 $font-family-serif: "Noto Serif", serif;
 $font-family-default: "Open Sans Variable", serif;
-$font-family-temp: "Roboto Condensed", sans-serif;
+$font-family-temp: "Roboto Condensed Variable", sans-serif;
 
 // Configuration for the rounded background
 $display-background: #000;
@@ -150,6 +150,7 @@ h1 {
       font-family: $font-family-temp;
       font-size: $font-size-current-temp;
       line-height: $font-size-current-temp;
+      font-weight: 500;
     }
   }
 
@@ -164,6 +165,7 @@ h1 {
 
     .widget-weather-table-temp {
       font-family: $font-family-temp;
+      font-weight: 500;
     }
   }
 }
