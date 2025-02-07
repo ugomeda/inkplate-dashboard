@@ -31,7 +31,6 @@ def _convert_image(screenshot: bytes) -> tuple[bytes, str]:
     img = Image.open(io.BytesIO(screenshot)).convert("RGB")
     img = img.crop((0, 0, 825, 1200))
     img = img.quantize(kmeans=0, palette=palette_img).convert("L")
-    img = img.rotate(90, expand=1)
 
     hash = hashlib.sha256(img.tobytes()).hexdigest()
 
