@@ -4,7 +4,7 @@ import sass
 from starlette.concurrency import run_in_threadpool
 from starlette.endpoints import HTTPEndpoint
 from starlette.requests import Request
-from starlette.responses import HTMLResponse, PlainTextResponse
+from starlette.responses import HTMLResponse, PlainTextResponse, Response
 
 from inkplate_dashboard.display import generate_html
 
@@ -28,6 +28,15 @@ class DisplayHtmlEndpoint(HTTPEndpoint):
 
 
 class DisplayPngEndpoint(HTTPEndpoint):
-    async def get(self, request: Request) -> PlainTextResponse:
-        image, _hash = await request.state.chromium.screenshot()
-        return PlainTextResponse(image, media_type="image/png")
+    async def get(self, request: Request) -> Response:
+        image, etag = await request.state.chromium.screenshot()
+        headers = {
+            "etag": etag,
+            "Cache-Control": f"max-age={request.app.display.refresh_interval_sec}",
+        }
+
+        # Tell the display to avoid a refresh if the image did not change
+        if request.headers.get("if-none-match") == etag:
+            return Response(status_code=304, headers=headers)
+
+        return PlainTextResponse(content=image, media_type="image/png", headers=headers)

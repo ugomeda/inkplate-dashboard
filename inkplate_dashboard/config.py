@@ -2,7 +2,7 @@ import tomllib
 from enum import Enum
 from typing import BinaryIO
 
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, HttpUrl, PositiveInt
 
 
 class UnitEnum(str, Enum):
@@ -16,6 +16,7 @@ class DisplayConfiguration(BaseModel):
     locale: str
     timezone: str
     units: UnitEnum
+    refresh_interval_sec: PositiveInt
 
 
 class Configuration(BaseModel):

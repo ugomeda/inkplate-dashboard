@@ -4,3 +4,4 @@ location = [40.75, -73.99]
 timezone = "America/New_York"
 locale = "en_US"
 units = "imperial"
+refresh_interval_sec = 1800  # refresh every 30 minutes
