@@ -5,3 +5,5 @@ FAKE_USER_AGENT = (
     "Chrome/129.0.0.0 "
     "Safari/537.36"
 )
+
+BATTERY_HEADER = "X-Inkplate-Battery-Voltage"

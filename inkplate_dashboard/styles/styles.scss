@@ -56,19 +56,32 @@ html, body {
   font-family: $font-family-default;
 }
 
-h1 {
+.widget-header {
   height: 100px;
   padding: $spacing;
-  margin: 0;
   box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  color: #fff;
+  background-color: #000;
 
   font-family: $font-family-serif;
   font-size: $font-size-huge;
   font-weight: 700;
   line-height: 100px - 2*$spacing;
 
-  color: #fff;
-  background-color: #000;
+  svg {
+    width: 24px; 
+    height: 24px;
+    transform: scale(1.5);  /* Sizing does not work, see https://github.com/lucide-icons/lucide/issues/2768 */
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
 }
 
 .widget-headlines {

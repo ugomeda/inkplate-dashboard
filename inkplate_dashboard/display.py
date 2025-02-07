@@ -15,9 +15,10 @@ class EpaperContext:
     weather: list[WeatherObservation]
     headlines: list[HeadlineEntry]
     date: str
+    battery_icon: str
 
 
-def generate_html(display: DisplayConfiguration) -> str:
+def generate_html(display: DisplayConfiguration, voltage: float | None) -> str:
     # Load RSS and weather
     headlines = get_headlines(str(display.rss_url))
     weather = get_weather(display)
@@ -25,6 +26,18 @@ def generate_html(display: DisplayConfiguration) -> str:
     # Get the date
     now = datetime.now(tz=get_timezone(display.timezone))
     date_str = format_date(now, format="full", locale=display.locale)
+
+    # Get battery level
+    battery_icon = "battery-warning"
+    if voltage is not None:
+        if voltage >= 4.2:
+            battery_icon = "battery-full"
+        elif voltage >= 4.0:
+            battery_icon = "battery-medium"
+        elif voltage >= 3.8:
+            battery_icon = "battery-low"
+        else:
+            battery_icon = "battery"
 
     # Generate HTML
     env = Environment(
@@ -39,5 +52,6 @@ def generate_html(display: DisplayConfiguration) -> str:
             weather=weather,
             headlines=headlines,
             date=date_str,
+            battery_icon=battery_icon,
         )
     )

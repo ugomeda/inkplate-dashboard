@@ -6,8 +6,13 @@ from starlette.endpoints import HTTPEndpoint
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, PlainTextResponse, Response
 
+from inkplate_dashboard.constants import BATTERY_HEADER
 from inkplate_dashboard.display import generate_html
-from inkplate_dashboard.state import get_state
+from inkplate_dashboard.utils import (
+    get_chromium,
+    get_display,
+    get_voltage,
+)
 
 
 def compile_styles() -> str:
@@ -26,17 +31,24 @@ class StylesEndpoint(HTTPEndpoint):
 class DisplayHtmlEndpoint(HTTPEndpoint):
     async def get(self, request: Request) -> HTMLResponse:
         return HTMLResponse(
-            await run_in_threadpool(generate_html, get_state(request).display)
+            await run_in_threadpool(
+                generate_html, get_display(request), get_voltage(request)
+            )
         )
 
 
 class DisplayPngEndpoint(HTTPEndpoint):
     async def get(self, request: Request) -> Response:
-        state = get_state(request)
-        image, etag = await state.chromium.screenshot()
+        extra_headers = {}
+        if BATTERY_HEADER in request.headers:
+            extra_headers[BATTERY_HEADER] = request.headers[BATTERY_HEADER]
+
+        image, etag = await get_chromium(request).screenshot(
+            extra_headers=extra_headers
+        )
         headers = {
             "etag": etag,
-            "Cache-Control": f"max-age={state.display.refresh_interval_sec}",
+            "Cache-Control": f"max-age={get_display(request).refresh_interval_sec}",
         }
 
         # Tell the display to avoid a refresh if the image did not change

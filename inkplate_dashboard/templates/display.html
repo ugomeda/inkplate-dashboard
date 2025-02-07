@@ -10,7 +10,10 @@
   </head>
   <body>
     <div id="display">
-      <h1>{{ data.date }}</h1>
+      <div class="widget-header">
+        <div>{{ data.date }}</div>
+        <svg xmlns="http://www.w3.org/2000/svg"><use href="/static/icons/lucide/sprite.svg#{{ data.battery_icon }}" /></svg>
+      </div>
       {{ widget_weather(data.weather) }}
       {{ widget_headlines(data.headlines) }}
     </div>

@@ -22,5 +22,4 @@ app = Starlette(routes=routes, lifespan=chrome_lifespan)
 with open("config.toml", "rb") as fd:
     config = parse_config(fd)
 
-
-app.display = config.display  # type: ignore[attr-defined]
+app.state.display = config.display

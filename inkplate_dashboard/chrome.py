@@ -44,8 +44,12 @@ def _convert_image(screenshot: bytes) -> tuple[bytes, str]:
 class ChromiumInstance:
     browser: Browser
 
-    async def screenshot(self) -> tuple[bytes, str]:
-        page = await self.browser.new_page(viewport={"width": 825, "height": 1200})
+    async def screenshot(
+        self, extra_headers: dict[str, str] | None = None
+    ) -> tuple[bytes, str]:
+        page = await self.browser.new_page(
+            viewport={"width": 825, "height": 1200}, extra_http_headers=extra_headers
+        )
         try:
             await page.goto("http://127.0.0.1:8000/live/html", timeout=5000)
             screenshot = await page.screenshot()
