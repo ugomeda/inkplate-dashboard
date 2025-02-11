@@ -59,9 +59,7 @@ class DisplayPngEndpoint(HTTPEndpoint):
             hour=0, minute=1, second=0, microsecond=0
         )
         time_until_tomorrow = int((tomorrow - now).total_seconds())
-        print(time_until_tomorrow)
         next_refresh = min(time_until_tomorrow, display.refresh_interval_sec)
-        print(next_refresh)
 
         headers = {
             "etag": etag,
