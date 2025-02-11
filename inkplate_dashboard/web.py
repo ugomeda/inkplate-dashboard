@@ -48,7 +48,7 @@ class DisplayPngEndpoint(HTTPEndpoint):
         )
         headers = {
             "etag": etag,
-            "Cache-Control": f"max-age={get_display(request).refresh_interval_sec}",
+            "x-inkplate-next-refresh": str(get_display(request).refresh_interval_sec),
         }
 
         # Tell the display to avoid a refresh if the image did not change

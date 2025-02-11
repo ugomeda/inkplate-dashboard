@@ -8,8 +8,7 @@
 #define MAX_ETAG_LENGTH 255
 
 #if !defined(ARDUINO_INKPLATE10) && !defined(ARDUINO_INKPLATE10V2)
-#error                                                                         \
-    "Wrong board selection for this example, please select e-radionica Inkplate10 or Soldered Inkplate10 in the boards menu."
+#error "Wrong board selection for this example, please select e-radionica Inkplate10 or Soldered Inkplate10 in the boards menu."
 #endif
 
 #define uS_TO_S_FACTOR 1000000 // Conversion factor for micro seconds to seconds
@@ -85,20 +84,6 @@ void display_status(const char *message, bool ignore_silent = false) {
   status_displayed = true;
 }
 
-uint16_t extract_max_age(const char *header) {
-  const char *key = "max-age=";
-  char *found = strstr(header, key);
-  if (found) {
-      int max_age;
-      if (sscanf(found + strlen(key), "%d", &max_age) == 1) {
-          if (max_age >= 0 && max_age <= UINT16_MAX) {
-              return (uint16_t)max_age;
-          }
-      }
-  }
-  return 0;
-}
-
 void load_and_display_image() {
   // FIXME Check content type
   // FIXME Display errors if needed
@@ -117,7 +102,7 @@ void load_and_display_image() {
   if (strlen(etag)) {
     http.addHeader("If-None-Match", etag);
   }
-  const char *headerkeys[] = {"content-type", "etag", "cache-control"};
+  const char *headerkeys[] = {"content-type", "etag", "x-inkplate-next-refresh"};
   http.collectHeaders(headerkeys, 3);
 
   // Launch request and check result
@@ -126,10 +111,11 @@ void load_and_display_image() {
     Serial.println("[HTTP] Server returned 304, nothing to update");
 
     // handle the delay
-    if (http.hasHeader("cache-control")) {
-      uint16_t max_age = extract_max_age(http.header("cache-control").c_str());
-      if (max_age > 0) {
-        sleep_duration = max_age;
+    if (http.hasHeader("x-inkplate-next-refresh")) {
+      String next_refresh_header = http.header("x-inkplate-next-refresh");
+      int next_refresh = atoi(next_refresh_header.c_str());
+      if (next_refresh > 0 && next_refresh <= UINT16_MAX) {
+        sleep_duration = next_refresh;
       }
     }
   } else if (httpCode == HTTP_CODE_OK) {
@@ -150,10 +136,11 @@ void load_and_display_image() {
       }
 
       // handle the delay
-      if (http.hasHeader("cache-control")) {
-        uint16_t max_age = extract_max_age(http.header("cache-control").c_str());
-        if (max_age > 0) {
-          sleep_duration = max_age;
+      if (http.hasHeader("x-inkplate-next-refresh")) {
+        String next_refresh_header = http.header("x-inkplate-next-refresh");
+        int next_refresh = atoi(next_refresh_header.c_str());
+        if (next_refresh > 0 && next_refresh <= UINT16_MAX) {
+          sleep_duration = next_refresh;
         }
       }
     } else {
