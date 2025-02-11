@@ -2,6 +2,7 @@ import base64
 import io
 from dataclasses import dataclass
 from datetime import datetime
+from xml.etree.ElementTree import Element
 
 import requests
 from defusedxml import ElementTree
@@ -10,7 +11,11 @@ from PIL import Image, ImageOps
 from inkplate_dashboard.constants import FAKE_USER_AGENT
 
 RSS_NS = {"media": "http://search.yahoo.com/mrss/"}
-FORMATS = ["%a, %d %b %Y %H:%M:%S %z", "%a, %d %b %Y %H:%M:%S %Z"]  # RFC
+FORMATS = [
+    "%a, %d %b %Y %H:%M:%S %z",  # RFC
+    "%a, %d %b %Y %H:%M:%S %Z",  # RFC
+    "%a, %d %b %y %H:%M:%S %z",  # France Info
+]
 
 
 @dataclass
@@ -59,6 +64,22 @@ def parse_date(date_str: str) -> datetime:
     raise ValueError(f"{date_str} is not parseable")
 
 
+def _find_image(entry: Element) -> str | None:
+    image_el = entry.find("media:content", RSS_NS)
+    if image_el is not None:
+        return str(image_el.get("url"))
+
+    enclosure_el = entry.find("enclosure", RSS_NS)
+    if enclosure_el is not None:
+        return str(enclosure_el.get("url"))
+
+    thumb_el = entry.find("media:thumbnail", RSS_NS)
+    if thumb_el is not None:
+        return str(thumb_el.get("url"))
+
+    return None
+
+
 def get_headlines(url: str) -> list[HeadlineEntry]:
     response = requests.get(url, headers={"User-Agent": FAKE_USER_AGENT}, timeout=10)
     response.raise_for_status()
@@ -74,16 +95,11 @@ def get_headlines(url: str) -> list[HeadlineEntry]:
         if title_el is None or description_el is None or pub_date_el is None:
             continue
 
-        image = None
-        image_el = entry.find("media:content", RSS_NS)
-        if image_el is not None:
-            image = str(image_el.get("url"))
-
         result.append(
             HeadlineEntry(
                 title=title_el.text or "",
                 description=description_el.text or "",
-                image=image,
+                image=_find_image(entry),
                 pub_date=parse_date(pub_date_el.text or ""),
             )
         )
