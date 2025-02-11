@@ -49,6 +49,14 @@ You should be able to access the dashboard on the following URLs:
 - Live HTML version: http://localhost:8000/live/html
 - Live PNG version: http://localhost:8000/live/png
 
+## ESP32 firmware
+
+You will need [PlatformIO](https://platformio.org/) to compile
+and flash your Inkplate.
+
+- Create a `firmware/src/config.h` based on the `config.h.example` provided
+- Use `pio run -t upload` to flash the Inkplate from the `firmware` folder
+
 ## Assets
 
 This projets uses:
