@@ -1,6 +1,8 @@
+from datetime import datetime, timedelta
 from importlib import resources
 
 import sass
+from babel.dates import get_timezone
 from starlette.concurrency import run_in_threadpool
 from starlette.endpoints import HTTPEndpoint
 from starlette.requests import Request
@@ -39,6 +41,9 @@ class DisplayHtmlEndpoint(HTTPEndpoint):
 
 class DisplayPngEndpoint(HTTPEndpoint):
     async def get(self, request: Request) -> Response:
+        display = get_display(request)
+
+        # Fetch the image
         extra_headers = {}
         if BATTERY_HEADER in request.headers:
             extra_headers[BATTERY_HEADER] = request.headers[BATTERY_HEADER]
@@ -46,9 +51,21 @@ class DisplayPngEndpoint(HTTPEndpoint):
         image, etag = await get_chromium(request).screenshot(
             extra_headers=extra_headers
         )
+
+        # Caculate the next refresh, we want to force an update a bit
+        # after midnight to force an update of the date in the header
+        now = datetime.now(tz=get_timezone(display.timezone))
+        tomorrow = (now + timedelta(days=1)).replace(
+            hour=0, minute=1, second=0, microsecond=0
+        )
+        time_until_tomorrow = int((tomorrow - now).total_seconds())
+        print(time_until_tomorrow)
+        next_refresh = min(time_until_tomorrow, display.refresh_interval_sec)
+        print(next_refresh)
+
         headers = {
             "etag": etag,
-            "x-inkplate-next-refresh": str(get_display(request).refresh_interval_sec),
+            "x-inkplate-next-refresh": str(next_refresh),
         }
 
         # Tell the display to avoid a refresh if the image did not change
