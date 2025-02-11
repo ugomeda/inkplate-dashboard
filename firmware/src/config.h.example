@@ -1,0 +1,12 @@
+// Wifi settings
+#define WIFI_SSID "Wifi SSID"
+#define WIFI_PASSWORD "mypassword"
+
+// Default refresh interval if none is given by the server.
+// This will only be used if the server is not responding or
+// if the served does not provide any max-age in the Cache-Control
+// headers. 
+#define DEFAULT_REFRESH_TIME_SECONDS 1800
+
+// Server settings
+#define SERVER_URL "http://192.168.101.13:8000/live/png"
