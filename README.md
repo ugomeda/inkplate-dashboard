@@ -5,6 +5,8 @@ Project to display a simple dashboard on an Inkplate 10 displaying articles
 from an RSS feed and the current weather, provided by the
 [MET Weather API](https://api.met.no/).
 
+![preview](./docs/preview.jpg)
+
 ## Server
 
 The server generates the dashboard as an HTML page, and uses Chromium to
