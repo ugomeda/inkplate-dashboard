@@ -155,7 +155,7 @@ void load_and_display_image() {
   http.end();
 }
 
-uint8_t check_wifi_connection(uint8_t max_attempts = 10) {
+uint8_t check_wifi_connection(uint8_t max_attempts = 100) {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
   uint8_t attempts = 0;
@@ -164,18 +164,18 @@ uint8_t check_wifi_connection(uint8_t max_attempts = 10) {
       return 1;
     }
 
-    if (attempts % 3 == 0) {
+    if (attempts % 30 == 0) {
       display_status("Connecting to Wifi.");
     }
-    if (attempts % 3 == 1) {
+    if (attempts % 30 == 10) {
       display_status("Connecting to Wifi..");
     }
-    if (attempts % 3 == 2) {
+    if (attempts % 30 == 20) {
       display_status("Connecting to Wifi...");
     }
 
     attempts++;
-    delay(1000);
+    delay(100);
   }
 
   return 0;
