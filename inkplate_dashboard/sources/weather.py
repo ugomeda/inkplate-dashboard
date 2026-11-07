@@ -49,11 +49,11 @@ def get_weather(display: DisplayConfiguration) -> list[WeatherObservation]:
 
             # Convert data based on locality
             temperature_celcius = cast(
-                float, ts_data["instant"]["details"]["air_temperature"]
+                "float", ts_data["instant"]["details"]["air_temperature"]
             )
-            wind_speed_mps = cast(float, ts_data["instant"]["details"]["wind_speed"])
+            wind_speed_mps = cast("float", ts_data["instant"]["details"]["wind_speed"])
             rain_mm = cast(
-                float,
+                "float",
                 ts_data["next_6_hours"]["details"].get("precipitation_amount", 0.0),
             )
 

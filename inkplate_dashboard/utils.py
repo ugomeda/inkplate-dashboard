@@ -8,11 +8,11 @@ from inkplate_dashboard.constants import BATTERY_HEADER
 
 
 def get_chromium(request: Request) -> ChromiumInstance:
-    return cast(ChromiumInstance, request.state.chromium)
+    return cast("ChromiumInstance", request.state.chromium)
 
 
 def get_display(request: Request) -> DisplayConfiguration:
-    return cast(DisplayConfiguration, request.app.state.display)
+    return cast("DisplayConfiguration", request.app.state.display)
 
 
 def get_voltage(request: Request) -> float | None:

@@ -1,34 +1,27 @@
-[tool.poetry]
-name = "inkplate-dashboard"
+[project]
+name = "epaper-dashboard"
 version = "0.1.0"
-description = "Project to display news and weather on an Inkplate 10"
-authors = ["Ugo Méda <meda.ugo@gmail.com>"]
+description = "RSS and weather dashboard for Inkplate 6 and Spectra 6 displays"
 readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "babel>=2.18.0",
+    "defusedxml>=0.7.1",
+    "jinja2>=3.1.6",
+    "pillow>=13.0.0",
+    "playwright>=1.64.1",
+    "pydantic>=2.14.3",
+    "requests>=2.34.2",
+    "starlette>=1.10.0",
+    "uvicorn>=0.54.0",
+]
 
-[tool.poetry.dependencies]
-python = "^3.11"
-tomlkit = "^0.13.2"
-Jinja2 = "^3.1.4"
-requests = "^2.32.3"
-pydantic = "^2.9.2"
-pillow = "^11.0.0"
-defusedxml = "^0.7.1"
-babel = "^2.16.0"
-libsass = "^0.23.0"
-starlette = "^0.45.0"
-uvicorn = "^0.34.0"
-playwright = "^1.49.1"
-
-[tool.poetry.group.dev.dependencies]
-ruff = "^0.9.0"
-mypy = "^1.12.0"
-types-requests = "^2.32.0.20241016"
-types-defusedxml = "^0.7.0.20240218"
-types-libsass = "^0.23.0.20240724"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[dependency-groups]
+dev = [
+    "mypy>=2.4.1",
+    "ruff>=0.17.4",
+    "types-defusedxml>=0.7.0.20260504",
+]
 
 [tool.ruff]
 target-version = "py311"

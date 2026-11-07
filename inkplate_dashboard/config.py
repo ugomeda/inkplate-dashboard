@@ -1,11 +1,11 @@
 import tomllib
-from enum import Enum
+from enum import StrEnum
 from typing import BinaryIO
 
 from pydantic import BaseModel, HttpUrl, PositiveInt
 
 
-class UnitEnum(str, Enum):
+class UnitEnum(StrEnum):
     metric = "metric"
     imperial = "imperial"
 
