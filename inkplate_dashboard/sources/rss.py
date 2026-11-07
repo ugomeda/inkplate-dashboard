@@ -43,7 +43,7 @@ class HeadlineEntry:
         req.raw.decode_content = True  # handle spurious Content-Encoding
 
         # B&W, resize, adjust
-        img = Image.open(req.raw).convert("L")  # type: ignore
+        img = Image.open(req.raw).convert("L")
         img = ImageOps.contain(img, (1000, 1000))
         img = ImageOps.autocontrast(img, cutoff=8)
 

@@ -1,50 +1,25 @@
-ARG BASE_IMAGE=python:slim-bookworm
-ARG PYTHON_VERSION="3.11"
+ARG PYTHON_VERSION=3.13
 
-FROM ${BASE_IMAGE} as poetry
-ARG PYTHON_VERSION
+FROM python:${PYTHON_VERSION}-slim-bookworm AS builder
 
-RUN apt-get update \
-    && apt-get install --no-install-recommends -y \
-        python${PYTHON_VERSION} \
-        python3-pip \
-        python3-venv \
-        python3-dev \
-        build-essential \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+ENV UV_PYTHON_DOWNLOADS=0 \
+    UV_LINK_MODE=copy
 
-RUN python3 -m venv /app/poetry/ \
-    && /app/poetry/bin/pip install poetry poetry-plugin-export
+# Install dependencies
+WORKDIR /app
+COPY pyproject.toml uv.lock README.md ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-dev --no-install-project
 
 
-FROM poetry as builder
-ARG PYTHON_VERSION
-
-WORKDIR /app/
-COPY pyproject.toml poetry.lock README.md /app/
-
-RUN /app/poetry/bin/poetry export --only=main --output=requirements.txt
-RUN python${PYTHON_VERSION} -m pip wheel -r requirements.txt --require-hashes -w /app/dist/
-
-RUN python${PYTHON_VERSION} -m venv /app/venv
-RUN /app/venv/bin/pip install /app/dist/*.whl
-
-
-FROM ${BASE_IMAGE} as runner
-ARG PYTHON_VERSION
-
-RUN apt-get update \
-    && apt-get install --no-install-recommends -y \
-        python${PYTHON_VERSION} \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+FROM python:${PYTHON_VERSION}-slim-bookworm AS runner
 
 WORKDIR /app
-
-COPY --from=builder /app/venv/ /app/venv/
-RUN ["/app/venv/bin/python3", "-m", "playwright", "install", "chromium", "--no-shell", "--with-deps"]
-
+ENV PATH="/app/.venv/bin:$PATH"
+COPY --from=builder /app/.venv /app/.venv
+RUN python -m playwright install chromium --no-shell --with-deps
 COPY inkplate_dashboard /app/inkplate_dashboard
 
-CMD ["/app/venv/bin/python3", "-m", "uvicorn", "inkplate_dashboard.app:app", "--host", "0.0.0.0"]
+CMD ["python", "-m", "uvicorn", "inkplate_dashboard.app:app", "--host", "0.0.0.0"]

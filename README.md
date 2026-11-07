@@ -34,16 +34,13 @@ Then access:
 To run the server:
 
 - Create a stub configuration by copying `config.example.toml` to `config.toml`
-- Setup your poetry environment
 - Install Chromium
 - Run the application
 
 ```
 cp config.exemple.toml config.toml
-poetry shell
-poetry install
-playwright install chromium --no-shell --with-deps
-uvicorn inkplate_dashboard.app:app
+uv run playwright install chromium --no-shell --with-deps
+uv run uvicorn inkplate_dashboard.app:app
 ```
 
 You should be able to access the dashboard on the following URLs:

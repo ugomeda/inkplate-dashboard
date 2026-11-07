@@ -1,7 +1,5 @@
 from datetime import datetime, timedelta
-from importlib import resources
 
-import sass
 from babel.dates import get_timezone
 from starlette.concurrency import run_in_threadpool
 from starlette.endpoints import HTTPEndpoint
@@ -15,19 +13,6 @@ from inkplate_dashboard.utils import (
     get_display,
     get_voltage,
 )
-
-
-def compile_styles() -> str:
-    file = resources.files("inkplate_dashboard").joinpath("styles/styles.scss")
-    with file.open("r") as fd:
-        return sass.compile(string=fd.read())
-
-
-class StylesEndpoint(HTTPEndpoint):
-    async def get(self, request: Request) -> PlainTextResponse:
-        return PlainTextResponse(
-            await run_in_threadpool(compile_styles), media_type="text/css"
-        )
 
 
 class DisplayHtmlEndpoint(HTTPEndpoint):
