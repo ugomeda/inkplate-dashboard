@@ -1,12 +1,10 @@
-{% from 'inkplate/headlines.html' import widget_headlines with context %}
-{% from 'inkplate/weather.html' import widget_weather with context %}
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <title>Inkplate 10 display</title>
     <link rel="stylesheet" type="text/css" href="/static/fonts.css">
-    <link rel="stylesheet" type="text/css" href="/static/inkplate.css">
+    <link rel="stylesheet" type="text/css" href="/static/inkplate10.css">
     <script src="/static/scripts.js"></script> 
   </head>
   <body>
@@ -15,8 +13,8 @@
         <div>{{ filters.format_day(data.now, "full") }}</div>
         {% include "lucide-icons/" ~ data.battery_icon ~ ".svg" %}
       </div>
-      {{ widget_weather(data.weather) }}
-      {{ widget_headlines(data.headlines) }}
+      {% include "inkplate10/weather.html" %}
+      {% include "inkplate10/news.html" %}
     </div>
     <script>
       window.addEventListener("load", function(){

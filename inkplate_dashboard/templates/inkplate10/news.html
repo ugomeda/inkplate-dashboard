@@ -1,0 +1,18 @@
+<div class="widget-headlines">
+{% for article in data.headlines[0:2] %}
+    <article lang="{{ article.language or 'en' }}">
+        <div class="widget-headlines-source">
+            {% if article.favicon %}<img src="{{ filters.image_data_uri(article.favicon) }}">{% endif %}
+            <span>
+                <strong>{{ article.website }}</strong>
+                {% if article.published_at %} - {{ filters.format_time(article.published_at, "short") }}{% endif %}
+            </span>
+        </div>
+        <h2>{{ article.title }}</h2>
+        <p class="widget-headlines-content">
+            {% if article.image %}<img src="{{ filters.image_data_uri(article.image) }}">{% endif %}
+            {{ article.summary }}
+        </p>
+    </article>
+{% endfor %}
+</div>

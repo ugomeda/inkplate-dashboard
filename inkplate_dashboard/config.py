@@ -12,6 +12,11 @@ class UnitEnum(StrEnum):
     imperial = "imperial"
 
 
+class DisplayProfile(StrEnum):
+    inkplate10 = "inkplate10"
+    spectra6 = "spectra6"
+
+
 class CacheConfiguration(BaseModel):
     path: str
     weather_ttl: PositiveInt = 6600  # 2h - 10min
@@ -28,6 +33,7 @@ class Feed(BaseModel):
 
 
 class DisplayConfiguration(BaseModel):
+    profile: DisplayProfile
     feeds: list[Feed]
     location: tuple[float, float]
     locale: str
@@ -42,7 +48,7 @@ class DisplayConfiguration(BaseModel):
 
 class Configuration(BaseModel):
     cache: CacheConfiguration
-    display: DisplayConfiguration
+    displays: dict[str, DisplayConfiguration]
 
 
 def parse_config(fp: BinaryIO) -> Configuration:

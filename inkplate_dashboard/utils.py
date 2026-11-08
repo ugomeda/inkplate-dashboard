@@ -1,5 +1,6 @@
 from typing import cast
 
+from starlette.exceptions import HTTPException
 from starlette.requests import Request
 
 from inkplate_dashboard.cache import AppCache
@@ -12,8 +13,11 @@ def get_firefox(request: Request) -> FirefoxInstance:
     return cast("FirefoxInstance", request.state.firefox)
 
 
-def get_display(request: Request) -> DisplayConfiguration:
-    return cast("DisplayConfiguration", request.app.state.display)
+def get_display(request: Request, display_id: str) -> DisplayConfiguration:
+    try:
+        return cast("DisplayConfiguration", request.app.state.displays[display_id])
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Display not found") from None
 
 
 def get_cache(request: Request) -> AppCache:

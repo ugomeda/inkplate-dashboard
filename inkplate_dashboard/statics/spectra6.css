@@ -19,7 +19,7 @@
 body, html {
   width: var(--display-width);
   height: var(--display-height);
-  background: #000000;
+  background: #aaa;
 }
 
 body {

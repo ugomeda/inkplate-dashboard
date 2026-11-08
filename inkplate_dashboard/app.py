@@ -15,8 +15,8 @@ from inkplate_dashboard.web import (
 )
 
 routes = [
-    Route("/live/html", DisplayHtmlEndpoint),
-    Route("/live/png", DisplayPngEndpoint),
+    Route("/live/{display_id}/html", DisplayHtmlEndpoint, name="display_html"),
+    Route("/live/{display_id}/png", DisplayPngEndpoint, name="display_png"),
     Mount("/static", app=StaticFiles(packages=["inkplate_dashboard"]), name="static"),
 ]
 
@@ -25,7 +25,7 @@ app = Starlette(routes=routes, lifespan=firefox_lifespan)
 with open("config.toml", "rb") as fd:
     config = parse_config(fd)
 
-app.state.display = config.display
+app.state.displays = config.displays
 app.state.cache = AppCache(config.cache)
 
 # Configure logging

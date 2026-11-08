@@ -1,0 +1,52 @@
+<section id="weather-section">
+    <div id="weather-section--date">
+        <h2>{{ filters.format_day(data.now, "full") }}</h2>
+    </div>
+
+    <div class="weather-section--separator"></div>
+
+    <div id="weather-section--current">
+        <img id="weather-section--current-icon" src="/static/icons/weather/{{ data.weather.current.conditions }}.svg" />
+        <div id="weather-section--current-temp"{% if data.weather.current.precipitation > 0 %} class="with-rain"{% endif %}>{{ data.weather.current.temperature | round | int }}°</div>
+        <div class="weather-section--icon" style="--direction: {{ data.weather.current.wind_from_direction + 180 }}deg;">
+            {% include "lucide-icons/move-up.svg" %} {{ filters.wind_speed(data.weather.current.wind_speed) }}
+        </div>
+        {% if data.weather.current.precipitation > 0 %}
+        <div class="weather-section--icon">
+            {% include "lucide-icons/cloud-rain.svg" %} {{ filters.rain(data.weather.current.precipitation) }}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="weather-section--separator"></div>
+
+    <div id="weather-section--hourly">
+        <div id="weather-section--hourly-table">
+        {% for forecast in data.weather.hourly %}
+            <div class="weather-section--hourly-slot" data-temp="{{ forecast.temperature }}">
+                <div class="weather-section--hourly-time">{{ filters.format_weather_hour(forecast.at) }}</div>
+                <img src="/static/icons/weather/{{ forecast.conditions }}.svg" class="weather-section--hourly-icon">
+                {% if forecast.precipitation > 0 %}<div class="weather-section--hourly-rain">{{ filters.rain(forecast.precipitation) }}</div>{% endif %}
+            </div>
+        {% endfor %}
+        </div>
+        <svg id="weather-section--hourly-graph"{% if data.weather.hourly_has_rain%} class="with-rain"{% endif %}></svg>
+    </div>
+
+    <div class="weather-section--separator"></div>
+
+    <div class="weather-section--daily">
+        {% set temperature_span = data.weather.daily_max_temperature - data.weather.daily_min_temperature %}
+        {% for forecast in data.weather.daily %}
+        {% set left = (forecast.min_temperature - data.weather.daily_min_temperature) / temperature_span * 100 %}
+        {% set width = (forecast.max_temperature - forecast.min_temperature) / temperature_span * 100 %}
+        <div class="weather-section--daily-row">
+            <div class="weather-section--daily-date">{{ filters.format_day(forecast.at, "EEE") | capitalize }}</div>
+            <div class="weather-section--daily-icon"><img src="/static/icons/weather/{{ forecast.conditions }}.svg"></div>
+            <div class="weather-section--daily-temp-min">{{ forecast.min_temperature | round | int }}°</div>
+            <div class="weather-section--daily-temp-graph"><div style="left: {{ left | round(1) }}%; width: {{ width | round(1) }}%;"></div></div>
+            <div class="weather-section--daily-temp-max">{{ forecast.max_temperature | round | int }}°</div>
+        </div>
+        {% endfor %}
+    </div>
+</section>

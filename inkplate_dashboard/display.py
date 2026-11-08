@@ -5,6 +5,7 @@ from jinja2 import Environment, PackageLoader, select_autoescape
 
 from inkplate_dashboard.cache import AppCache
 from inkplate_dashboard.config import DisplayConfiguration
+from inkplate_dashboard.displays import DISPLAYS
 from inkplate_dashboard.sources.rss import Article, fetch_news
 from inkplate_dashboard.sources.weather import WeatherData, get_weather
 from inkplate_dashboard.template import TemplateFilters
@@ -22,9 +23,13 @@ class EpaperContext:
 def generate_html(
     app_cache: AppCache, display: DisplayConfiguration, voltage: float | None
 ) -> str:
+    profile = DISPLAYS[display.profile]
+
     # Load RSS and weather
     headlines = fetch_news(app_cache, display)
-    weather = get_weather(app_cache, display, 3, 0)
+    weather = get_weather(
+        app_cache, display, profile.weather_hours, profile.weather_days
+    )
 
     # Get battery level
     battery_icon = "battery-exclamation-point"
@@ -43,7 +48,7 @@ def generate_html(
         loader=PackageLoader("inkplate_dashboard", "templates"),
         autoescape=select_autoescape(),
     )
-    template = env.get_template("inkplate/display.html")
+    template = env.get_template(profile.template)
 
     return template.render(
         filters=TemplateFilters(display),

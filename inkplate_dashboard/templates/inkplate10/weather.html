@@ -1,0 +1,23 @@
+<div class="widget-weather">
+    <div class="widget-weather-current">
+        <img src="/static/icons/weather/{{ data.weather.current.conditions }}.svg">
+        <div>
+            <div class="widget-weather-current-temperature">{{ filters.temperature(data.weather.current.temperature) }}</div>
+            <div style="--direction: {{ data.weather.current.wind_from_direction + 180 }}deg;">
+                {% include "lucide-icons/move-up.svg" %} {{ filters.wind_speed(data.weather.current.wind_speed) }}
+            </div>
+            {% if data.weather.current.precipitation %}
+            <div>
+                {% include "lucide-icons/cloud-rain.svg" %} {{ filters.rain(data.weather.current.precipitation) }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+{% for observation in data.weather.hourly %}
+    <div class="widget-weather-next">
+        <div>{{ filters.format_weather_hour(observation.at) }}</div>
+        <img src="/static/icons/weather/{{ observation.conditions }}.svg">
+        <div class="widget-weather-table-temp">{{ filters.temperature(observation.temperature) }}</div>
+    </div>
+{% endfor %}
+</div>

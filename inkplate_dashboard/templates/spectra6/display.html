@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Spectra 6 display</title>
+    <link rel="stylesheet" type="text/css" href="/static/fonts.css">
+    <link rel="stylesheet" type="text/css" href="/static/spectra6.css">
+    <script src="/static/scripts.js"></script> 
+  </head>
+  <body>
+    <div id="display">
+      {% include "spectra6/news.html" %}
+      {% include "spectra6/weather.html" %}
+    </div>
+    <script>
+      window.addEventListener("load", function(){
+        fitNewsColumn("#news-section");
+      });
+    </script>
+  </body>
+</html>
