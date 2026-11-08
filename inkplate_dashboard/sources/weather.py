@@ -1,90 +1,173 @@
+import logging
 from dataclasses import dataclass
-from datetime import datetime
-from typing import cast
+from datetime import date, datetime, time, timedelta, tzinfo
+from typing import Any, cast
 
 import requests
-from babel.dates import format_time, get_timezone
 
-from inkplate_dashboard.config import DisplayConfiguration, UnitEnum
+from inkplate_dashboard.cache import AppCache, CacheNS
+from inkplate_dashboard.config import DisplayConfiguration
 
-MET_API_URL = "https://api.met.no/weatherapi/locationforecast/2.0/compact"
+logger = logging.getLogger(__name__)
 
-
-def celcius_to_fahrenheit(temp: float) -> float:
-    return (9 / 5) * temp + 32
+METNO_URL = "https://api.met.no/weatherapi/locationforecast/2.0/compact"
 
 
 @dataclass
-class WeatherObservation:
-    date: datetime
-    date_short_locale: str
-    icon: str
+class WeatherForecast:
+    temperature: float
+    conditions: str  # MET.no symbol_code, e.g. "partlycloudy_day"
+    wind_speed: float  # m/s
+    wind_from_direction: int  # degrees
+    precipitation: float  # mm
+    at: datetime
 
-    temperature: str
-    wind: str
-    rain: str | None
+
+@dataclass
+class WeatherDailyForecast:
+    min_temperature: float
+    max_temperature: float
+    conditions: str
+    at: datetime
 
 
-def get_weather(display: DisplayConfiguration) -> list[WeatherObservation]:
-    # Fetch JSON
-    request = requests.get(
-        MET_API_URL,
-        headers={"user-agent": "github.com/ugomeda/inkplate-dashboard"},
-        params={
-            "lat": f"{display.location[0]:.2f}",
-            "lon": f"{display.location[1]:.2f}",
-        },
-        timeout=3,
+@dataclass
+class WeatherData:
+    current: WeatherForecast
+    hourly: list[WeatherForecast]
+    daily: list[WeatherDailyForecast]
+    daily_min_temperature: float
+    daily_max_temperature: float
+    hourly_has_rain: bool
+
+
+def _parse_time(value: str, tz: tzinfo) -> datetime:
+    return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(tz)
+
+
+def _get_weather_forecast(
+    timeseries: list[dict[str, Any]], tz: tzinfo
+) -> WeatherForecast:
+    return WeatherForecast(
+        temperature=timeseries[0]["data"]["instant"]["details"]["air_temperature"],
+        conditions=timeseries[0]["data"]["next_1_hours"]["summary"]["symbol_code"],
+        wind_speed=timeseries[0]["data"]["instant"]["details"]["wind_speed"],
+        wind_from_direction=round(
+            timeseries[0]["data"]["instant"]["details"]["wind_from_direction"]
+        ),
+        precipitation=sum(
+            forecast["data"]["next_1_hours"]["details"]["precipitation_amount"]
+            for forecast in timeseries
+        ),
+        at=_parse_time(timeseries[0]["time"], tz),
     )
-    request.raise_for_status()
-    data = request.json()
 
-    # Compile results
-    result = []
-    for ts in data["properties"]["timeseries"][0::4]:
-        ts_data = ts["data"]
 
-        if "next_1_hours" in ts_data and "next_6_hours" in ts_data:
-            date = datetime.fromisoformat(ts["time"])
+def _get_weather_daily_forecast(
+    date_: date, timeseries: list[dict[str, Any]], tz: tzinfo
+) -> WeatherDailyForecast:
+    temperatures = [
+        forecast["data"]["instant"]["details"]["air_temperature"]
+        for forecast in timeseries
+    ]
 
-            # Convert data based on locality
-            temperature_celcius = cast(
-                "float", ts_data["instant"]["details"]["air_temperature"]
+    # Take the conditions around the middle of the day (8h-20h)
+    midday_forecast = min(
+        [ts for ts in timeseries if "next_12_hours" in ts["data"]],
+        key=lambda item: abs(
+            _parse_time(item["time"], tz) - datetime.combine(date_, time(hour=8), tz)
+        ),
+    )
+
+    return WeatherDailyForecast(
+        min_temperature=min(temperatures),
+        max_temperature=max(temperatures),
+        conditions=midday_forecast["data"]["next_12_hours"]["summary"]["symbol_code"],
+        at=_parse_time(midday_forecast["time"], tz),
+    )
+
+
+def _load_weather(cache: AppCache, location: tuple[float, float]) -> dict[str, Any]:
+    cached = cache.get(CacheNS.weather, str(location))
+    if cached:
+        logger.info("loaded from cache")
+        return cast("dict[str, Any]", cached)
+
+    response = requests.get(
+        METNO_URL,
+        params={
+            "lat": round(location[0], 4),
+            "lon": round(location[1], 4),
+        },
+        headers={
+            "User-Agent": "github.com/ugomeda/inkplate-dashboard",
+            "Accept": "application/json",
+        },
+        timeout=15,
+    )
+    response.raise_for_status()
+
+    cache.set(CacheNS.weather, str(location), response.json())
+
+    return cast("dict[str, Any]", response.json())
+
+
+def get_weather(
+    cache: AppCache,
+    config: DisplayConfiguration,
+    hourly_count: int,
+    daily_count: int,
+) -> WeatherData:
+    tz = config.tz()
+    timeseries = _load_weather(cache, config.location)["properties"]["timeseries"]
+    if not timeseries:
+        raise RuntimeError("MET.no returned an empty forecast")
+
+    # Current forecast
+    now = datetime.now(tz)
+    start_index = next(
+        i for i, item in enumerate(timeseries) if _parse_time(item["time"], tz) > now
+    )
+
+    current_forecast = _get_weather_forecast([timeseries[start_index]], tz)
+
+    # Get the hourly forecasts
+    hourly_forecasts: list[WeatherForecast] = []
+    for hourly_index in range(hourly_count):
+        hourly_forecasts.append(
+            _get_weather_forecast(
+                [
+                    timeseries[
+                        start_index
+                        + 1
+                        + hourly_index * config.weather_hours_interval
+                        + hour
+                    ]
+                    for hour in range(config.weather_hours_interval)
+                ],
+                tz,
             )
-            wind_speed_mps = cast("float", ts_data["instant"]["details"]["wind_speed"])
-            rain_mm = cast(
-                "float",
-                ts_data["next_6_hours"]["details"].get("precipitation_amount", 0.0),
-            )
+        )
 
-            rain = None
-            if display.units == UnitEnum.metric:
-                temperature = f"{round(temperature_celcius)}°"
-                wind_speed = f"{round(wind_speed_mps * 3.6)}km/h"
-                if rain_mm > 0:
-                    rain = f"{rain_mm:.1f}mm"
-            elif display.units == UnitEnum.imperial:
-                temperature = f"{round(celcius_to_fahrenheit(temperature_celcius))}°"
-                wind_speed = f"{round(wind_speed_mps * 2.237)}mph"
-                if rain_mm > 0:
-                    rain = f"{rain_mm / 25.4:.3f}in"
-            else:
-                raise Exception("Unexpected unit type")
+    # Get the daily forecasts
+    daily_forecasts: list[WeatherDailyForecast] = []
+    for daily_index in range(daily_count):
+        day = (now + timedelta(days=daily_index + 1)).date()
+        day_timeseries = [
+            data for data in timeseries if _parse_time(data["time"], tz).date() == day
+        ]
 
-            result.append(
-                WeatherObservation(
-                    date=date,
-                    date_short_locale=format_time(
-                        date,
-                        format="short",
-                        tzinfo=get_timezone(display.timezone),
-                        locale=display.locale,
-                    ),
-                    icon=ts_data["next_1_hours"]["summary"]["symbol_code"],
-                    temperature=temperature,
-                    wind=wind_speed,
-                    rain=rain,
-                )
-            )
+        daily_forecasts.append(_get_weather_daily_forecast(day, day_timeseries, tz))
 
-    return result
+    return WeatherData(
+        current=current_forecast,
+        hourly=hourly_forecasts,
+        daily=daily_forecasts,
+        daily_min_temperature=min(
+            (day.min_temperature for day in daily_forecasts), default=0.0
+        ),
+        daily_max_temperature=max(
+            (day.max_temperature for day in daily_forecasts), default=0.0
+        ),
+        hourly_has_rain=any(hourly.precipitation > 0 for hourly in hourly_forecasts),
+    )

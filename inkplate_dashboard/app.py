@@ -2,6 +2,7 @@ from starlette.applications import Starlette
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
+from inkplate_dashboard.cache import AppCache
 from inkplate_dashboard.chrome import chrome_lifespan
 from inkplate_dashboard.config import parse_config
 from inkplate_dashboard.web import (
@@ -21,3 +22,4 @@ with open("config.toml", "rb") as fd:
     config = parse_config(fd)
 
 app.state.display = config.display
+app.state.cache = AppCache(config.cache)

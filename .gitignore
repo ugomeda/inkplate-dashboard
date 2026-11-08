@@ -4,3 +4,4 @@ config.toml
 firmware/src/config.h
 .vscode
 .pio
+.cache

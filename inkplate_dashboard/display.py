@@ -4,24 +4,28 @@ from datetime import datetime
 from babel.dates import format_date, get_timezone
 from jinja2 import Environment, PackageLoader, select_autoescape
 
+from inkplate_dashboard.cache import AppCache
 from inkplate_dashboard.config import DisplayConfiguration
 from inkplate_dashboard.sources.rss import HeadlineEntry, get_headlines
-from inkplate_dashboard.sources.weather import WeatherObservation, get_weather
+from inkplate_dashboard.sources.weather import WeatherData, get_weather
+from inkplate_dashboard.template import TemplateFilters
 
 
 @dataclass
 class EpaperContext:
     config: DisplayConfiguration
-    weather: list[WeatherObservation]
+    weather: WeatherData
     headlines: list[HeadlineEntry]
     date: str
     battery_icon: str
 
 
-def generate_html(display: DisplayConfiguration, voltage: float | None) -> str:
+def generate_html(
+    app_cache: AppCache, display: DisplayConfiguration, voltage: float | None
+) -> str:
     # Load RSS and weather
     headlines = get_headlines(str(display.rss_url))
-    weather = get_weather(display)
+    weather = get_weather(app_cache, display, 3, 0)
 
     # Get the date
     now = datetime.now(tz=get_timezone(display.timezone))
@@ -47,11 +51,12 @@ def generate_html(display: DisplayConfiguration, voltage: float | None) -> str:
     template = env.get_template("display.html")
 
     return template.render(
+        filters=TemplateFilters(display),
         data=EpaperContext(
             config=display,
             weather=weather,
             headlines=headlines,
             date=date_str,
             battery_icon=battery_icon,
-        )
+        ),
     )

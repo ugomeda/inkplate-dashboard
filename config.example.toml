@@ -1,3 +1,6 @@
+[cache]
+path = ".cache"
+
 [display]
 rss_url = "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml"
 location = [40.75, -73.99]
@@ -5,3 +8,4 @@ timezone = "America/New_York"
 locale = "en_US"
 units = "imperial"
 refresh_interval_sec = 1800  # refresh every 30 minutes
+weather_hours_interval = 4

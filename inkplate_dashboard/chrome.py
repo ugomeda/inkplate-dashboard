@@ -3,7 +3,7 @@ import contextlib
 import hashlib
 import io
 import itertools
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
 from PIL import Image
@@ -61,7 +61,9 @@ class ChromiumInstance:
 
 
 @contextlib.asynccontextmanager
-async def chrome_lifespan(app: Starlette) -> AsyncIterator[dict[str, ChromiumInstance]]:
+async def chrome_lifespan(
+    app: Starlette,
+) -> AsyncGenerator[dict[str, ChromiumInstance]]:
     async with async_playwright() as playwright:
         browser = await playwright.chromium.launch(
             channel="chromium",

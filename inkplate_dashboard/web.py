@@ -9,6 +9,7 @@ from starlette.responses import HTMLResponse, PlainTextResponse, Response
 from inkplate_dashboard.constants import BATTERY_HEADER
 from inkplate_dashboard.display import generate_html
 from inkplate_dashboard.utils import (
+    get_cache,
     get_chromium,
     get_display,
     get_voltage,
@@ -19,7 +20,10 @@ class DisplayHtmlEndpoint(HTTPEndpoint):
     async def get(self, request: Request) -> HTMLResponse:
         return HTMLResponse(
             await run_in_threadpool(
-                generate_html, get_display(request), get_voltage(request)
+                generate_html,
+                get_cache(request),
+                get_display(request),
+                get_voltage(request),
             )
         )
 

@@ -1,28 +1,28 @@
 {% macro widget_weather(weather) %}
 <div class="widget-weather">
     <div class="widget-weather-current">
-        <img src="/static/icons/weather/{{ weather[0].icon }}.svg">
+        <img src="/static/icons/weather/{{ weather.current.conditions }}.svg">
         <div>
-            <div class="widget-weather-current-temperature">{{ weather[0].temperature }}</div>
+            <div class="widget-weather-current-temperature">{{ filters.temperature(weather.current.temperature) }}</div>
             <div>
                 <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <use href="/static/icons/lucide/sprite.svg#wind" />
-                </svg> {{ weather[0].wind }}
+                </svg> {{ filters.wind_speed(weather.current.wind_speed) }}
             </div>
-            {% if weather[0].rain %}
+            {% if weather.current.precipitation %}
             <div>
                 <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <use href="/static/icons/lucide/sprite.svg#umbrella" />
-                </svg> {{ weather[0].rain }}
+                </svg> {{ filters.rain(weather.current.precipitation) }}
             </div>
             {% endif %}
         </div>
     </div>
-{% for observation in weather[1:4] %}
+{% for observation in weather.hourly %}
     <div class="widget-weather-next">
-        <div>{{ observation.date_short_locale }}</div>
-        <img src="/static/icons/weather/{{ observation.icon }}.svg">
-        <div class="widget-weather-table-temp">{{ observation.temperature }}</div>
+        <div>{{ filters.format_weather_hour(observation.at) }}</div>
+        <img src="/static/icons/weather/{{ observation.conditions }}.svg">
+        <div class="widget-weather-table-temp">{{ filters.temperature(observation.temperature) }}</div>
     </div>
 {% endfor %}
 </div>
