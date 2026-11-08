@@ -43,7 +43,7 @@ def generate_html(
         loader=PackageLoader("inkplate_dashboard", "templates"),
         autoescape=select_autoescape(),
     )
-    template = env.get_template("display.html")
+    template = env.get_template("inkplate/display.html")
 
     return template.render(
         filters=TemplateFilters(display),

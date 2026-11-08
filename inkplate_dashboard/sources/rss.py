@@ -252,7 +252,7 @@ def _load_image(cache: AppCache, feed: Feed, url: str | None) -> bytes | None:
         logger.info("used cache for image %s", url)
         return cast("bytes", cached)
 
-    req = requests.get(url, headers={"User-Agent": feed.user_agent})
+    req = requests.get(url, timeout=15, headers={"User-Agent": feed.user_agent})
     req.raise_for_status()
 
     cache.set(CacheNS.rss_image, url, req.content)
