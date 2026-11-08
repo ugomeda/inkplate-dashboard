@@ -1,6 +1,10 @@
+import logging
+import sys
+
 from starlette.applications import Starlette
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
+from uvicorn.logging import DefaultFormatter
 
 from inkplate_dashboard.cache import AppCache
 from inkplate_dashboard.config import parse_config
@@ -23,3 +27,11 @@ with open("config.toml", "rb") as fd:
 
 app.state.display = config.display
 app.state.cache = AppCache(config.cache)
+
+# Configure logging
+handler = logging.StreamHandler(sys.stderr)
+handler.setFormatter(DefaultFormatter("%(levelprefix)s [%(name)s] %(message)s"))
+logger = logging.getLogger("inkplate_dashboard")
+logger.setLevel(logging.INFO)
+logger.addHandler(handler)
+logger.propagate = False
