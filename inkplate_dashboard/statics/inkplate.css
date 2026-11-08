@@ -1,5 +1,5 @@
 :root {
-  --font-size-default: 24px;
+  --font-size-default: 28px;
   --font-size-huge: 40px;
   --font-size-current-temp: 70px;
   --font-family-serif: 'Noto Serif Variable', serif;
@@ -37,10 +37,10 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  font-weight: 500;
 
   color: #fff;
   background-color: #000;
-
 
   font-family: var(--font-family-serif);
   font-size: var(--font-size-huge);
@@ -145,8 +145,8 @@ html, body {
   stroke-linecap: round;
   stroke-linejoin: round;
 
-  /* for weather direction */
-  transform: rotate(var(--direction));
+  transform: translateY(2px) rotate(var(--direction));
+  margin-right: 5px;
   transform-origin: center;
 }
 
@@ -154,7 +154,7 @@ html, body {
   font-family: var(--font-family-temp);
   font-size: var(--font-size-current-temp);
   line-height: var(--font-size-current-temp);
-  font-weight: 300;
+  font-weight: 500;
 }
 
 .widget-weather-next {
@@ -169,5 +169,5 @@ html, body {
 
 .widget-weather-table-temp {
   font-family: var(--font-family-temp);
-  font-weight: 300;
+  font-weight: 500;
 }
