@@ -124,8 +124,9 @@ img {
 /* Weather: date, sunset, sunrise */
 #weather-section--date h2 {
   margin-bottom: 5px;
-  font-size: 38px;
-  font-weight: 400;
+  font-size: 36px;
+  font-weight: 500;
+  font-family: var(--font-serif);
 }
 
 #weather-section--date .weather-section--icon {
@@ -137,18 +138,17 @@ img {
   font-family: var(--font-current-temp);
   font-size: 150px;
   font-weight: 300;
-  line-height: 150px;
+  line-height: 140px;
 }
 
 #weather-section--current-temp.with-rain {
   font-size: 110px;
-  line-height: 110px;
+  line-height: 100px;
 }
 
 #weather-section--current-icon {
   float: right;
-  width: 250px;
-  margin: -50px;
+  width: 200px;
 }
 
 /* Weather: hourly-ish forecast */
@@ -169,9 +169,8 @@ img {
 }
 
 .weather-section--hourly-icon {
-    width: 100px;
-    height: 100px;
-    margin: -10px -50px;
+    width: 80px;
+    height: 80px;
 }
 
 .weather-section--hourly-rain {
@@ -208,9 +207,9 @@ img {
 }
 
 .weather-section--daily-icon img {
-  width: 80px;
-  height: 80px;
-  margin: -5px 0;
+  width: 60px;
+  height: 60px;
+  margin: 5px;
 }
 
 .weather-section--daily-temp-min {
