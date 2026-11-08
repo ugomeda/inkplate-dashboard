@@ -4,16 +4,12 @@
         <img src="/static/icons/weather/{{ weather.current.conditions }}.svg">
         <div>
             <div class="widget-weather-current-temperature">{{ filters.temperature(weather.current.temperature) }}</div>
-            <div>
-                <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <use href="/static/icons/lucide/sprite.svg#wind" />
-                </svg> {{ filters.wind_speed(weather.current.wind_speed) }}
+            <div style="--direction: {{ weather.current.wind_from_direction + 180 }}deg;">
+                {% include "lucide-icons/move-up.svg" %} {{ filters.wind_speed(weather.current.wind_speed) }}
             </div>
             {% if weather.current.precipitation %}
             <div>
-                <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <use href="/static/icons/lucide/sprite.svg#umbrella" />
-                </svg> {{ filters.rain(weather.current.precipitation) }}
+                {% include "lucide-icons/cloud-rain.svg" %} {{ filters.rain(weather.current.precipitation) }}
             </div>
             {% endif %}
         </div>

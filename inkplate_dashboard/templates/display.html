@@ -12,7 +12,7 @@
     <div id="display">
       <div class="widget-header">
         <div>{{ filters.format_day(data.now, "full") }}</div>
-        <svg xmlns="http://www.w3.org/2000/svg"><use href="/static/icons/lucide/sprite.svg#{{ data.battery_icon }}" /></svg>
+        {% include "lucide-icons/" ~ data.battery_icon ~ ".svg" %}
       </div>
       {{ widget_weather(data.weather) }}
       {{ widget_headlines(data.headlines) }}

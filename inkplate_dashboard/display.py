@@ -27,7 +27,7 @@ def generate_html(
     weather = get_weather(app_cache, display, 3, 0)
 
     # Get battery level
-    battery_icon = "battery-warning"
+    battery_icon = "battery-exclamation-point"
     if voltage is not None:
         if voltage >= 4.2:
             battery_icon = "battery-full"
