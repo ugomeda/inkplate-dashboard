@@ -9,7 +9,7 @@ from an RSS feed and the current weather, provided by the
 
 ## Server
 
-The server generates the dashboard as an HTML page, and uses Chromium to
+The server generates the dashboard as an HTML page, and uses Firefox to
 screenshot it and generate a PNG which can be sent to the Inkplate 10.
 
 ### Docker quickstart
@@ -34,12 +34,12 @@ Then access:
 To run the server:
 
 - Create a stub configuration by copying `config.example.toml` to `config.toml`
-- Install Chromium
+- Install Firefox
 - Run the application
 
 ```
 cp config.exemple.toml config.toml
-uv run playwright install chromium --no-shell --with-deps
+uv run playwright install firefox --with-deps
 uv run uvicorn inkplate_dashboard.app:app
 ```
 
