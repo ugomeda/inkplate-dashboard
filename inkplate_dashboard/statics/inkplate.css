@@ -37,7 +37,7 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-weight: 500;
+  font-weight: 700;
 
   color: #fff;
   background-color: #000;
@@ -106,6 +106,7 @@ html, body {
   margin: 5px 0 15px 15px;
   border: 1px solid #000;
   border-radius: 10px;
+  filter: grayscale(100%) contrast(1.2) brightness(1.08);
 }
 
 /* Weather */
