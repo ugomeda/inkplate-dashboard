@@ -2,7 +2,6 @@ import asyncio
 import contextlib
 import hashlib
 import io
-import itertools
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
@@ -14,32 +13,35 @@ from inkplate_dashboard.displays import Display
 
 
 def _convert_image(screenshot: bytes, display: Display) -> tuple[bytes, str]:
-    # Reduce the palette to 8 colors to reduce file size and control
-    # dithering
-    palette = list(
-        itertools.chain(
-            *[
-                [
-                    round((i + 1 / 2) * (256 / 8)),
-                    round((i + 1 / 2) * (256 / 8)),
-                    round((i + 1 / 2) * (256 / 8)),
-                ]
-                for i in range(8)
-            ]
-        )
-    )
+    # Build a 256-color palette from the display configuration
+    colors = [rgb for rgb, _ in display.palette]
+    palette_data = [channel for rgb in colors for channel in rgb]
+
     palette_img = Image.new("P", (1, 1))
-    palette_img.putpalette(palette * 32)
+    palette_img.putpalette((palette_data * (768 // len(palette_data) + 1))[:768])
+
+    # Crop and quantize
     img = Image.open(io.BytesIO(screenshot)).convert("RGB")
     img = img.crop((0, 0, display.width, display.height))
-    img = img.quantize(kmeans=0, palette=palette_img).convert("L")
 
-    hash = hashlib.sha256(img.tobytes()).hexdigest()
+    img = img.quantize(
+        palette=palette_img,
+        dither=Image.Dither.FLOYDSTEINBERG,
+    )
+
+    # Normalize duplicated palette entries to 0..N-1
+    img.frombytes(bytes(index % len(colors) for index in img.tobytes()))
+
+    # Preserve the output format expected by each display
+    if display.png_mode == "L":
+        img = img.convert("L")
+
+    hash_value = hashlib.sha256(img.tobytes()).hexdigest()
 
     output = io.BytesIO()
-    img.save(output, "png")
+    img.save(output, "PNG")
 
-    return output.getvalue(), hash
+    return output.getvalue(), hash_value
 
 
 @dataclass
