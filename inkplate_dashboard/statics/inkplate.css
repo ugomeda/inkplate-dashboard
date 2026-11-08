@@ -122,6 +122,7 @@ html, body {
 .widget-headlines-content {
   text-align: justify;
   hyphens: auto;
+  margin: 0;
 }
 
 .widget-headlines-content img {
