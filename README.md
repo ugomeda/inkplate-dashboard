@@ -62,5 +62,4 @@ This projets uses:
 
 - Weather icons: https://github.com/nrkno/yr-weather-symbols
 - Icons: https://github.com/lucide-icons/lucide
-- textFit: https://github.com/STRML/textFit
 - Fonts: https://github.com/fontsource

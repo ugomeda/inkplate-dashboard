@@ -6,7 +6,7 @@
     <meta charset="utf-8">
     <title>Inkplate 10 display</title>
     <link rel="stylesheet" type="text/css" href="/static/styles.css">
-    <script src="/static/js/textfit/textFit.min.js"></script> 
+    <script src="/static/scripts.js"></script> 
   </head>
   <body>
     <div id="display">
@@ -19,7 +19,7 @@
     </div>
     <script>
       window.addEventListener("load", function(){
-        textFit(document.getElementsByClassName("widget-headlines"));
+        fitNewsColumn(".widget-headlines");
       });
     </script>
   </body>
