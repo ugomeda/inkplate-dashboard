@@ -2,10 +2,21 @@
 path = ".cache"
 
 [display]
-rss_url = "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml"
 location = [40.75, -73.99]
 timezone = "America/New_York"
 locale = "en_US"
 units = "imperial"
 refresh_interval_sec = 1800  # refresh every 30 minutes
 weather_hours_interval = 4
+
+[[display.feeds]]
+url = "https://feeds.bbci.co.uk/news/world/rss.xml"
+summary_words = [50, 70]
+ignore_elements = [".visually-hidden"]
+user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:158.0) Gecko/20100101 Firefox/158.0"
+
+[[display.feeds]]
+url = "https://www.france24.com/en/france/rss"
+summary_words = [50, 70]
+ignore_elements = ["#didomi-host", "h1"]
+user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:158.0) Gecko/20100101 Firefox/158.0"

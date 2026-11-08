@@ -105,6 +105,21 @@ html, body {
   padding-bottom: var(--spacing);
 }
 
+.widget-headlines-source {
+  color: #222;
+  font-size: 20px;
+  display: flex;
+  gap: 10px;
+  padding-bottom: 7px;
+}
+
+.widget-headlines-source img {
+  width: 25px;
+  height: 25px;
+  border-radius: 13px;
+  object-fit: contain;
+}
+
 .widget-headlines h2 {
   margin: 0 0 .4em 0;
   font-family: var(--font-family-serif);

@@ -1,107 +1,340 @@
-import base64
-import io
+import calendar
+import logging
+import re
 from dataclasses import dataclass
-from datetime import datetime
-from xml.etree.ElementTree import Element
+from datetime import datetime, tzinfo
+from typing import Any, cast
+from urllib.parse import urljoin
 
+import feedparser
 import requests
-from defusedxml import ElementTree
-from PIL import Image, ImageOps
+import trafilatura
+from bs4 import BeautifulSoup
+from playwright.sync_api import Browser, TimeoutError, sync_playwright
 
-from inkplate_dashboard.constants import FAKE_USER_AGENT
+from inkplate_dashboard.cache import AppCache, CacheNS
+from inkplate_dashboard.config import DisplayConfiguration, Feed
 
-RSS_NS = {"media": "http://search.yahoo.com/mrss/"}
-FORMATS = [
-    "%a, %d %b %Y %H:%M:%S %z",  # RFC
-    "%a, %d %b %Y %H:%M:%S %Z",  # RFC
-    "%a, %d %b %y %H:%M:%S %z",  # France Info
-]
+logger = logging.getLogger(__name__)
 
 
 @dataclass
-class HeadlineEntry:
+class RSSArticle:
     title: str
-    description: str
+    url: str
+    website: str
+    summary: str
     image: str | None
-    pub_date: datetime
-
-    def is_long(self) -> bool:
-        """Small tweak to adapt the size of the large headline."""
-        return (len(self.title) * 1.5 + len(self.description)) > 400
-
-    def get_image(self) -> str | None:
-        """Fetches the image and adjusts luminosity for better inkplate
-        output. Returns the image as a b64 encoded image."""
-        if self.image is None:
-            return None
-
-        # Fetch image
-        req = requests.get(
-            self.image, stream=True, headers={"User-Agent": FAKE_USER_AGENT}
-        )
-        req.raise_for_status()
-        req.raw.decode_content = True  # handle spurious Content-Encoding
-
-        # B&W, resize, adjust
-        img = Image.open(req.raw).convert("L")
-        img = ImageOps.contain(img, (1000, 1000))
-        img = ImageOps.autocontrast(img, cutoff=8)
-
-        # Return output
-        stream = io.BytesIO()
-        img.save(stream, "jpeg")
-
-        return base64.b64encode(stream.getvalue()).decode()
+    published_at: datetime | None
+    language: str | None
 
 
-def parse_date(date_str: str) -> datetime:
-    for format in FORMATS:
-        try:
-            return datetime.strptime(date_str, format)
-        except ValueError:
-            pass
+@dataclass
+class Article:
+    title: str
+    website: str
+    image: bytes | None
+    favicon: bytes | None
+    summary: str
+    published_at: datetime | None
+    language: str | None
 
-    raise ValueError(f"{date_str} is not parseable")
+
+def _filter_rss_article(article: RSSArticle) -> bool:
+    # filters out lemonde live articles which renders as garbage
+    if "/live/" in article.url:
+        return False
+
+    return True
 
 
-def _find_image(entry: Element) -> str | None:
-    image_el = entry.find("media:content", RSS_NS)
-    if image_el is not None:
-        return str(image_el.get("url"))
+def clean_html(text: str | None) -> str:
+    if not text:
+        return ""
 
-    enclosure_el = entry.find("enclosure", RSS_NS)
-    if enclosure_el is not None:
-        return str(enclosure_el.get("url"))
+    return BeautifulSoup(text, "html.parser").get_text(" ", strip=True)
 
-    thumb_el = entry.find("media:thumbnail", RSS_NS)
-    if thumb_el is not None:
-        return str(thumb_el.get("url"))
+
+def _normalize_whitespace(text: str) -> str:
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _shorten_summary(text: str, min_words: int, max_words: int) -> str:
+    text = _normalize_whitespace(text)
+    if not text:
+        return ""
+
+    words = text.split()
+    if len(words) <= max_words:
+        return text
+
+    sentences = re.split(r"(?<=[.!?…])\s+", text)
+
+    result: list[str] = []
+    word_count = 0
+
+    for sentence in sentences:
+        sentence_words = sentence.split()
+        if result and word_count + len(sentence_words) > max_words:
+            break
+
+        result.append(sentence)
+        word_count += len(sentence_words)
+        if word_count >= min_words:
+            break
+
+    if word_count >= min_words:
+        return " ".join(result)
+
+    return " ".join(words[:max_words]).rstrip(" ,;:") + "…"
+
+
+def _rss_image(entry: dict[str, Any]) -> str | None:
+    # media:content
+    for media in entry.get("media_content", []):
+        url = media.get("url")
+        if url:
+            return cast("str", url)
+
+    # media:thumbnail
+    for media in entry.get("media_thumbnail", []):
+        url = media.get("url")
+        if url:
+            return cast("str", url)
+
+    # enclosure
+    for link in entry.get("links", []):
+        content_type = link.get("type", "")
+        if content_type.startswith("image/"):
+            return cast("str", link.get("href"))
 
     return None
 
 
-def get_headlines(url: str) -> list[HeadlineEntry]:
-    response = requests.get(url, headers={"User-Agent": FAKE_USER_AGENT}, timeout=10)
+def _get_cached_rss_content(
+    cache: AppCache, feed: Feed
+) -> tuple[bytes, dict[str, str]]:
+    feed_url = str(feed.url)
+    cached = cache.get(CacheNS.rss_feed, feed_url)
+    if cached is not None:
+        logger.info("using cache for %s", feed_url)
+        return cast("tuple[bytes, dict[str, str]]", cached)
+
+    response = requests.get(
+        feed_url, timeout=15, headers={"User-Agent": feed.user_agent}
+    )
     response.raise_for_status()
+    value = (response.content, dict(response.headers))
 
-    root = ElementTree.fromstring(response.content)
+    cache.set(CacheNS.rss_feed, feed_url, value)
 
-    result = []
-    for entry in root.findall("./channel/item"):
-        title_el = entry.find("title")
-        description_el = entry.find("description")
-        pub_date_el = entry.find("pubDate")
+    return value
 
-        if title_el is None or description_el is None or pub_date_el is None:
+
+def _rss_published_at(entry: dict[str, Any], tz: tzinfo) -> datetime | None:
+    parsed = entry.get("published_parsed") or entry.get("updated_parsed")
+    if parsed is None:
+        return None
+
+    return datetime.fromtimestamp(calendar.timegm(parsed), tz=tz)
+
+
+def _rss_language(feed: Any, entry: dict[str, Any]) -> str | None:
+    return entry.get("language") or feed.feed.get("language") or None
+
+
+def _load_rss_feed(
+    cache: AppCache, config: DisplayConfiguration, feed: Feed
+) -> list[RSSArticle]:
+    content, headers = _get_cached_rss_content(cache, feed)
+    rss_content = feedparser.parse(content, response_headers=headers)
+
+    return [
+        RSSArticle(
+            title=clean_html(entry.get("title", "")),
+            url=entry["link"],
+            website=clean_html(rss_content.feed.get("title", "")),
+            summary=clean_html(entry.get("summary") or entry.get("description") or ""),
+            image=_rss_image(entry),
+            published_at=_rss_published_at(entry, config.tz()),
+            language=_rss_language(rss_content, entry),
+        )
+        for entry in rss_content.entries
+    ]
+
+
+def _page_get_meta(
+    page: BeautifulSoup, selectors: list[str], default: str | None
+) -> str | None:
+    for selector in selectors:
+        element = page.select_one(selector)
+        if element is None:
             continue
 
-        result.append(
-            HeadlineEntry(
-                title=title_el.text or "",
-                description=description_el.text or "",
-                image=_find_image(entry),
-                pub_date=parse_date(pub_date_el.text or ""),
-            )
+        value = element.get("content")
+        if value:
+            return _normalize_whitespace(str(value))
+
+    return default
+
+
+def _page_get_favicon(base_url: str, page: BeautifulSoup) -> str | None:
+    selectors = [
+        'link[rel="icon"]',
+        'link[rel="shortcut icon"]',
+        'link[rel="apple-touch-icon"]',
+    ]
+
+    for selector in selectors:
+        element = page.select_one(selector)
+        if element is None:
+            continue
+
+        href = cast("str | None", element.get("href"))
+        if href:
+            return urljoin(base_url, href)
+
+    return None
+
+
+def _page_extract_text(config: Feed, html: str, url: str) -> str:
+    page = BeautifulSoup(html, "html.parser")
+
+    for selector in config.ignore_elements:
+        for element in page.select(selector):
+            element.decompose()
+
+    result = trafilatura.bare_extraction(
+        str(page),
+        url=url,
+        include_comments=False,
+        include_tables=False,
+        favor_precision=True,
+    )
+
+    if result is None:
+        return ""
+
+    return _normalize_whitespace(result.text or "")  # type:ignore
+
+
+def _page_get_html(cache: AppCache, browser: Browser, url: str, locale: str) -> str:
+    cached = cache.get(CacheNS.rss_article, url)
+    if cached is not None:
+        logger.info("used cache for article %s", url)
+        return cast("str", cached)
+
+    context = browser.new_context(locale=locale)
+    try:
+        page = context.new_page()
+        page.goto(url, wait_until="domcontentloaded", timeout=30_000)
+
+        try:
+            page.wait_for_selector("article", timeout=8_000)
+        except TimeoutError:
+            page.wait_for_timeout(2_000)
+
+        html = page.content()
+    finally:
+        context.close()
+
+    cache.set(CacheNS.rss_article, url, html)
+
+    return html
+
+
+def _load_image(cache: AppCache, feed: Feed, url: str | None) -> bytes | None:
+    if url is None:
+        return None
+
+    cached = cache.get(CacheNS.rss_image, url)
+    if cached is not None:
+        logger.info("used cache for image %s", url)
+        return cast("bytes", cached)
+
+    req = requests.get(url, headers={"User-Agent": feed.user_agent})
+    req.raise_for_status()
+
+    cache.set(CacheNS.rss_image, url, req.content)
+    return req.content
+
+
+def render_article(
+    config: DisplayConfiguration,
+    feed: Feed,
+    browser: Browser,
+    cache: AppCache,
+    rss_article: RSSArticle,
+) -> Article:
+    try:
+        html = _page_get_html(cache, browser, rss_article.url, config.locale)
+        parsed_page = BeautifulSoup(html, "html.parser")
+
+        # Extract metas
+        title = _page_get_meta(
+            parsed_page, ['meta[property="og:title"]'], rss_article.title
         )
+        website = _page_get_meta(
+            parsed_page, ['meta[property="og:site_name"]'], rss_article.website
+        )
+        image = _page_get_meta(
+            parsed_page,
+            ['meta[property="og:image"]', 'meta[name="twitter:image"]'],
+            rss_article.image,
+        )
+        favicon = _page_get_favicon(rss_article.url, parsed_page)
+
+        # Extract body
+        text = _page_extract_text(feed, html, rss_article.url)
+        text = _normalize_whitespace(text)
+        if len(text.split()) < 50:  # default to RSS summary if extraction failed
+            text = rss_article.summary
+
+        return Article(
+            title=title or "",
+            website=website or "",
+            image=_load_image(cache, feed, image),
+            favicon=_load_image(cache, feed, favicon),
+            summary=_shorten_summary(
+                text, feed.summary_words[0], feed.summary_words[1]
+            ),
+            published_at=rss_article.published_at,
+            language=rss_article.language,
+        )
+
+    except TimeoutError:
+        logger.exception("error while fetching article %s", rss_article.url)
+
+        return Article(
+            title=rss_article.title,
+            website=rss_article.website,
+            image=_load_image(cache, feed, rss_article.image),
+            favicon=None,
+            summary=_shorten_summary(
+                rss_article.summary, feed.summary_words[0], feed.summary_words[1]
+            ),
+            published_at=rss_article.published_at,
+            language=rss_article.language,
+        )
+
+
+def fetch_news(cache: AppCache, config: DisplayConfiguration) -> list[Article]:
+    result: list[Article] = []
+
+    with sync_playwright() as playwright:
+        browser = playwright.firefox.launch(headless=True)
+
+        try:
+            for feed in config.feeds:
+                articles = _load_rss_feed(cache, config, feed)
+                if not articles:
+                    raise RuntimeError(f"No articles found in {feed.url}")
+
+                article = next(
+                    article for article in articles if _filter_rss_article(article)
+                )
+                result.append(render_article(config, feed, browser, cache, article))
+        finally:
+            browser.close()
 
     return result

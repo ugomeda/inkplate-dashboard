@@ -5,7 +5,7 @@ from jinja2 import Environment, PackageLoader, select_autoescape
 
 from inkplate_dashboard.cache import AppCache
 from inkplate_dashboard.config import DisplayConfiguration
-from inkplate_dashboard.sources.rss import HeadlineEntry, get_headlines
+from inkplate_dashboard.sources.rss import Article, fetch_news
 from inkplate_dashboard.sources.weather import WeatherData, get_weather
 from inkplate_dashboard.template import TemplateFilters
 
@@ -14,7 +14,7 @@ from inkplate_dashboard.template import TemplateFilters
 class EpaperContext:
     config: DisplayConfiguration
     weather: WeatherData
-    headlines: list[HeadlineEntry]
+    headlines: list[Article]
     now: datetime
     battery_icon: str
 
@@ -23,7 +23,7 @@ def generate_html(
     app_cache: AppCache, display: DisplayConfiguration, voltage: float | None
 ) -> str:
     # Load RSS and weather
-    headlines = get_headlines(str(display.rss_url))
+    headlines = fetch_news(app_cache, display)
     weather = get_weather(app_cache, display, 3, 0)
 
     # Get battery level

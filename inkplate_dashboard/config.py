@@ -4,7 +4,7 @@ from enum import StrEnum
 from typing import BinaryIO
 from zoneinfo import ZoneInfo
 
-from pydantic import BaseModel, HttpUrl, PositiveInt
+from pydantic import BaseModel, Field, HttpUrl, PositiveInt
 
 
 class UnitEnum(StrEnum):
@@ -15,10 +15,20 @@ class UnitEnum(StrEnum):
 class CacheConfiguration(BaseModel):
     path: str
     weather_ttl: PositiveInt = 6600  # 2h - 10min
+    rss_feed_ttl: PositiveInt = 1800  # 30 minutes
+    rss_article_ttl: PositiveInt = 7200  # 2h
+    rss_image_ttl: PositiveInt = 7200  # 2h
+
+
+class Feed(BaseModel):
+    url: HttpUrl
+    ignore_elements: list[str] = Field(default_factory=list)
+    summary_words: tuple[PositiveInt, PositiveInt] = (70, 100)
+    user_agent: str
 
 
 class DisplayConfiguration(BaseModel):
-    rss_url: HttpUrl
+    feeds: list[Feed]
     location: tuple[float, float]
     locale: str
     timezone: str
