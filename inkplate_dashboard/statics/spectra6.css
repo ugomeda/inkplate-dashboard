@@ -1,0 +1,239 @@
+/* Variables */
+:root {
+  --display-width: 1600px;
+  --display-height: 1200px;
+  --news-section-width: 1000px;
+  --padding: 40px;
+  --font-default: "Inter Variable", sans-serif;
+  --font-serif: "Noto Serif Variable", serif;
+  --font-current-temp: "Poppins", sans-serif;
+}
+
+/* General setup */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body, html {
+  width: var(--display-width);
+  height: var(--display-height);
+  background: #000000;
+}
+
+body {
+  font-family: var(--font-default);
+}
+
+img {
+  display: block;
+}
+
+/* Display */
+#display {
+  width: var(--display-width);
+  height: var(--display-height);
+  background: #fff;
+  display: flex;
+}
+
+/* News section */
+#news-section {
+  width: var(--news-section-width);
+  height: var(--display-height);
+  padding: var(--padding);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--padding);
+}
+
+.news-section--source {
+  color: #222;
+  font-size: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+.news-section--source img {
+  width: 25px;
+  height: 25px;
+  border-radius: 13px;
+  object-fit: contain;
+}
+
+#news-section h2 {
+  font-size: 1.3em;
+  line-height: 1.15;
+  font-family: var(--font-serif);
+  margin: 10px 0 10px;
+  hyphens: auto;
+  text-align: justify;
+  letter-spacing: -0.01em;
+}
+
+#news-section p {
+  line-height: 1.2;
+  text-align: justify;
+  hyphens: auto;
+}
+
+#news-section p img {
+  float: right;
+  max-width: 400px;
+  margin: 5px 0 15px 20px;
+  border: 1px solid #000;
+  border-radius: 10px;
+}
+
+/* Weather */
+#weather-section {
+  background: #000;
+  width: calc(var(--display-width) - var(--news-section-width));
+  height: var(--display-height);
+  color: #fff;
+  padding: var(--padding);
+  display: flex;
+  flex-direction: column;
+  font-size: 25px;
+}
+
+.weather-section--separator {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.weather-section--icon {
+  --direction: 0;
+
+  font-size: 28px;
+  line-height: 25px;
+  margin: 5px 0;
+}
+
+.weather-section--icon svg {
+  width: 40px;
+  height: 40px;
+  stroke: currentColor;
+  transform: translateY(8px) rotate(var(--direction));
+  margin-right: 7px;
+}
+
+/* Weather: date, sunset, sunrise */
+#weather-section--date h2 {
+  margin-bottom: 5px;
+  font-size: 38px;
+  font-weight: 400;
+}
+
+#weather-section--date .weather-section--icon {
+  margin-right: var(--padding);
+}
+
+/* Weather: current conditions */
+#weather-section--current-temp {
+  font-family: var(--font-current-temp);
+  font-size: 150px;
+  font-weight: 300;
+  line-height: 150px;
+}
+
+#weather-section--current-temp.with-rain {
+  font-size: 110px;
+  line-height: 110px;
+}
+
+#weather-section--current-icon {
+  float: right;
+  width: 250px;
+  margin: -50px;
+}
+
+/* Weather: hourly-ish forecast */
+#weather-section--hourly {
+  margin: 0 -10px;
+}
+
+#weather-section--hourly-table {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+}
+
+.weather-section--hourly-slot {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+}
+
+.weather-section--hourly-icon {
+    width: 100px;
+    height: 100px;
+    margin: -10px -50px;
+}
+
+.weather-section--hourly-rain {
+  margin: 0 0 20px 0;
+  font-size: 16px;
+  font-weight: 500;
+  text-align: center;
+  color: #888;
+}
+
+#weather-section--hourly-graph {
+  height: 130px;
+  width: 100%;
+}
+
+#weather-section--hourly-graph.with-rain {
+  height: 100px;
+}
+
+/* Weather: daily forecast */
+.weather-section--daily-row {
+  display: grid;
+  grid-template-columns:
+    72px /* day */
+    100px /* icon */
+    50px /* min temp */
+    1fr  /* chart */
+    50px;  /* max temp */
+  align-items: center;
+}
+
+.weather-section--daily-date {
+  font-weight: 600;
+}
+
+.weather-section--daily-icon img {
+  width: 80px;
+  height: 80px;
+  margin: -5px 0;
+}
+
+.weather-section--daily-temp-min {
+  color: #888;
+  text-align: right;
+}
+
+.weather-section--daily-temp-max {
+  text-align: right;
+}
+
+.weather-section--daily-temp-graph {
+  position: relative;
+  height: 8px;
+  margin: 0 14px;
+  background: #222;
+  border-radius: 999px;
+}
+
+.weather-section--daily-temp-graph div {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: #fff;
+  border-radius: 999px;
+}
