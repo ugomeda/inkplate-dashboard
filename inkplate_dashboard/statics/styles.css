@@ -87,22 +87,13 @@ html, body {
 
 .widget-headlines {
   height: 900px;
-  /* will be overridden by textfit, all the following sizes are relative */
-  padding: var(--spacing) var(--spacing) 0 var(--spacing);
+  padding: var(--spacing);
   box-sizing: border-box;
   line-height: 1.25;
-}
-
-.widget-headlines-inner {  /* We need this because textFit messes with flexbox */
-  height: calc(900px - var(--spacing));
   display: flex;
   flex-direction: column;
   justify-content: space-evenly;
-  box-sizing: border-box;
-}
-
-.widget-headlines article {
-  padding-bottom: var(--spacing);
+  gap: var(--spacing);
 }
 
 .widget-headlines-source {
@@ -110,7 +101,6 @@ html, body {
   font-size: 20px;
   display: flex;
   gap: 10px;
-  padding-bottom: 7px;
 }
 
 .widget-headlines-source img {
@@ -121,7 +111,7 @@ html, body {
 }
 
 .widget-headlines h2 {
-  margin: 0 0 .4em 0;
+  margin: 7px 0 .4em 0;
   font-family: var(--font-family-serif);
   font-size: 1.3em;
   font-weight: 700;
