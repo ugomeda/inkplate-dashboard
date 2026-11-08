@@ -36,6 +36,8 @@ def _convert_image(screenshot: bytes, display: Display) -> tuple[bytes, str]:
     if display.png_mode == "L":
         img = img.convert("L")
 
+    img = img.rotate(display.rotate, expand=True)
+
     hash_value = hashlib.sha256(img.tobytes()).hexdigest()
 
     output = io.BytesIO()

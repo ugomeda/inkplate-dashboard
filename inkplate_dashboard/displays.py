@@ -12,6 +12,7 @@ class Display:
     weather_days: int
     weather_hours: int
     png_mode: Literal["L", "P"]
+    rotate: int
     palette: list[tuple[tuple[int, int, int], int]]
 
 
@@ -23,6 +24,7 @@ DISPLAYS = {
         weather_days=0,
         weather_hours=3,
         png_mode="L",  # grayscale
+        rotate=0,
         palette=[
             ((16, 16, 16), 0x0),
             ((48, 48, 48), 0x1),
@@ -41,6 +43,7 @@ DISPLAYS = {
         weather_days=5,
         weather_hours=6,
         png_mode="P",  # palette
+        rotate=90,
         palette=[
             ((2, 2, 2), 0x0),  # black
             ((190, 200, 200), 0x1),  # white
