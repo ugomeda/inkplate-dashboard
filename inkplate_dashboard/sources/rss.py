@@ -322,7 +322,7 @@ def fetch_news(cache: AppCache, config: DisplayConfiguration) -> list[Article]:
     result: list[Article] = []
 
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(channel="chromium", headless=True)
+        browser = playwright.firefox.launch(headless=True)
 
         try:
             for feed in config.feeds:

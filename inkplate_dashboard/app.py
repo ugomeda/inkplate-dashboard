@@ -3,8 +3,8 @@ from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
 from inkplate_dashboard.cache import AppCache
-from inkplate_dashboard.chrome import chrome_lifespan
 from inkplate_dashboard.config import parse_config
+from inkplate_dashboard.firefox import firefox_lifespan
 from inkplate_dashboard.web import (
     DisplayHtmlEndpoint,
     DisplayPngEndpoint,
@@ -16,7 +16,7 @@ routes = [
     Mount("/static", app=StaticFiles(packages=["inkplate_dashboard"]), name="static"),
 ]
 
-app = Starlette(routes=routes, lifespan=chrome_lifespan)
+app = Starlette(routes=routes, lifespan=firefox_lifespan)
 
 with open("config.toml", "rb") as fd:
     config = parse_config(fd)

@@ -41,7 +41,7 @@ def _convert_image(screenshot: bytes) -> tuple[bytes, str]:
 
 
 @dataclass
-class ChromiumInstance:
+class FirefoxInstance:
     browser: Browser
 
     async def screenshot(
@@ -51,7 +51,7 @@ class ChromiumInstance:
             viewport={"width": 825, "height": 1200}, extra_http_headers=extra_headers
         )
         try:
-            await page.goto("http://127.0.0.1:8000/live/html", timeout=5000)
+            await page.goto("http://127.0.0.1:8000/live/html", timeout=10000)
             screenshot = await page.screenshot()
         finally:
             await page.close()
@@ -61,12 +61,12 @@ class ChromiumInstance:
 
 
 @contextlib.asynccontextmanager
-async def chrome_lifespan(
+async def firefox_lifespan(
     app: Starlette,
-) -> AsyncGenerator[dict[str, ChromiumInstance]]:
+) -> AsyncGenerator[dict[str, FirefoxInstance]]:
     async with async_playwright() as playwright:
-        browser = await playwright.chromium.launch(
-            channel="chromium",
-            args=["--disable-lcd-text", "--high-dpi-support=1", "--disable-gpu"],
-        )
-        yield {"chromium": ChromiumInstance(browser)}
+        browser = await playwright.firefox.launch(headless=True)
+        try:
+            yield {"firefox": FirefoxInstance(browser)}
+        finally:
+            await browser.close()

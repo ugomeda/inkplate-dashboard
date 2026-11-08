@@ -3,13 +3,13 @@ from typing import cast
 from starlette.requests import Request
 
 from inkplate_dashboard.cache import AppCache
-from inkplate_dashboard.chrome import ChromiumInstance
 from inkplate_dashboard.config import DisplayConfiguration
 from inkplate_dashboard.constants import BATTERY_HEADER
+from inkplate_dashboard.firefox import FirefoxInstance
 
 
-def get_chromium(request: Request) -> ChromiumInstance:
-    return cast("ChromiumInstance", request.state.chromium)
+def get_firefox(request: Request) -> FirefoxInstance:
+    return cast("FirefoxInstance", request.state.firefox)
 
 
 def get_display(request: Request) -> DisplayConfiguration:

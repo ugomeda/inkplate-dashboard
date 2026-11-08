@@ -19,7 +19,7 @@ FROM python:${PYTHON_VERSION}-slim-bookworm AS runner
 WORKDIR /app
 ENV PATH="/app/.venv/bin:$PATH"
 COPY --from=builder /app/.venv /app/.venv
-RUN python -m playwright install chromium --no-shell --with-deps
+RUN python -m playwright install firefox --with-deps
 COPY inkplate_dashboard /app/inkplate_dashboard
 
 CMD ["python", "-m", "uvicorn", "inkplate_dashboard.app:app", "--host", "0.0.0.0"]
