@@ -11,7 +11,7 @@
   <body>
     <div id="display">
       <div class="widget-header">
-        <div>{{ data.date }}</div>
+        <div>{{ filters.format_day(data.now, "full") }}</div>
         <svg xmlns="http://www.w3.org/2000/svg"><use href="/static/icons/lucide/sprite.svg#{{ data.battery_icon }}" /></svg>
       </div>
       {{ widget_weather(data.weather) }}
