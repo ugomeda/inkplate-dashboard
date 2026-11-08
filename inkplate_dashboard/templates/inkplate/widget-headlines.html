@@ -10,12 +10,10 @@
             </span>
         </div>
         <h2>{{ article.title }}</h2>
-        <div class="widget-headlines-content">
-            {% if article.image %}
-            <div class="widget-headlines-illustration" style="background-image: url('{{ filters.image_data_uri(article.image) }}')"></div>
-            {% endif %}
-            <div class="widget-headlines-description">{{ article.summary }}</div>
-        </div>
+        <p class="widget-headlines-content">
+            {% if article.image %}<img src="{{ filters.image_data_uri(article.image) }}">{% endif %}
+            {{ article.summary }}
+        </p>
     </article>
 {% endfor %}
 </div>
