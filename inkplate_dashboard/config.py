@@ -20,6 +20,7 @@ class DisplayProfile(StrEnum):
 class CacheConfiguration(BaseModel):
     path: str
     weather_ttl: PositiveInt = 6600  # 2h - 10min
+    sun_ttl: PositiveInt = 48 * 3600  # 2 days
     rss_feed_ttl: PositiveInt = 1800  # 30 minutes
     rss_article_ttl: PositiveInt = 7200  # 2h
     rss_image_ttl: PositiveInt = 7200  # 2h

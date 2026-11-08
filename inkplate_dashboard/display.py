@@ -7,6 +7,7 @@ from inkplate_dashboard.cache import AppCache
 from inkplate_dashboard.config import DisplayConfiguration
 from inkplate_dashboard.displays import DISPLAYS
 from inkplate_dashboard.sources.rss import Article, fetch_news
+from inkplate_dashboard.sources.sun import SunData, fetch_sun
 from inkplate_dashboard.sources.weather import WeatherData, get_weather
 from inkplate_dashboard.template import TemplateFilters
 
@@ -18,18 +19,21 @@ class EpaperContext:
     headlines: list[Article]
     now: datetime
     battery_icon: str
+    sun: SunData
 
 
 def generate_html(
     app_cache: AppCache, display: DisplayConfiguration, voltage: float | None
 ) -> str:
     profile = DISPLAYS[display.profile]
+    now = datetime.now(tz=display.tz())
 
-    # Load RSS and weather
+    # Load RSS, weather and sun informations
     headlines = fetch_news(app_cache, display)
     weather = get_weather(
         app_cache, display, profile.weather_hours, profile.weather_days
     )
+    sun = fetch_sun(app_cache, display, now)
 
     # Get battery level
     battery_icon = "battery-exclamation-point"
@@ -56,7 +60,8 @@ def generate_html(
             config=display,
             weather=weather,
             headlines=headlines,
-            now=datetime.now(tz=display.tz()),
+            now=now,
             battery_icon=battery_icon,
+            sun=sun,
         ),
     )

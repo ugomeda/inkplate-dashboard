@@ -1,6 +1,13 @@
 <section id="weather-section">
     <div id="weather-section--date">
         <h2>{{ filters.format_day(data.now, "full") }}</h2>
+        <span class="weather-section--icon">
+            {% include "lucide-icons/sunrise.svg" %} {{ filters.format_time(data.sun.sunrise, "short") }}
+        </span>
+
+        <span class="weather-section--icon">
+            {% include "lucide-icons/sunset.svg" %} {{ filters.format_time(data.sun.sunset, "short") }}
+        </span>
     </div>
 
     <div class="weather-section--separator"></div>

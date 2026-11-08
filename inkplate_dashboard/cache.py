@@ -9,6 +9,7 @@ from inkplate_dashboard.config import CacheConfiguration
 
 class CacheNS(StrEnum):
     weather = "weather"
+    sun = "sun"
     rss_feed = "rss_feed"
     rss_article = "rss_article"
     rss_image = "rss_image"
@@ -28,6 +29,8 @@ class AppCache:
         match namespace:
             case CacheNS.weather:
                 return self.config.weather_ttl
+            case CacheNS.sun:
+                return self.config.sun_ttl
             case CacheNS.rss_feed:
                 return self.config.rss_feed_ttl
             case CacheNS.rss_article:
