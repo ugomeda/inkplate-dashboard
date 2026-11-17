@@ -8,6 +8,8 @@
 #include "png_decoder.h"
 #include "spectra6.h"
 
+#include "driver/gpio.h"
+#include "driver/rtc_io.h"
 #include "esp_attr.h"
 #include "esp_event.h"
 #include "esp_heap_caps.h"
@@ -30,6 +32,7 @@ constexpr uint32_t ERROR_RETRY_SECONDS = 300;
 constexpr uint32_t MIN_REFRESH_SECONDS = 30;
 constexpr uint32_t MAX_REFRESH_SECONDS = 24 * 3600;
 constexpr size_t ETAG_BUFFER_SIZE = 128;
+constexpr gpio_num_t REFRESH_BUTTON_GPIO = GPIO_NUM_2; // EE02 button 1: active-low
 
 // RTC memory survives deep sleep, but not an ordinary power cycle.
 RTC_DATA_ATTR char stored_etag[ETAG_BUFFER_SIZE] = {};
@@ -268,12 +271,42 @@ esp_err_t render_png(const PngDownload &download) {
 static void enter_deep_sleep(uint32_t seconds) {
     ESP_LOGI(TAG, "Sleeping for %lu seconds", static_cast<unsigned long>(seconds));
 
-    // Called once during each wake cycle; reset state is handled on next boot.
     ESP_ERROR_CHECK(esp_sleep_enable_timer_wakeup(
         static_cast<uint64_t>(seconds) * 1000000ULL));
 
-    // Give log output a chance to flush before entering deep sleep.
-    vTaskDelay(pdMS_TO_TICKS(100));
+    // GPIO2 is button 1 on the EE02, with an external pull-up resistor.
+    // EXT0 uses RTC IO, so restore the digital GPIO function before reading it.
+    ESP_ERROR_CHECK(rtc_gpio_deinit(REFRESH_BUTTON_GPIO));
+    gpio_config_t button_config = {};
+    button_config.pin_bit_mask = 1ULL << REFRESH_BUTTON_GPIO;
+    button_config.mode = GPIO_MODE_INPUT;
+    button_config.pull_up_en = GPIO_PULLUP_ENABLE;
+    button_config.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    ESP_ERROR_CHECK(gpio_config(&button_config));
+
+    // EXT0 is level-triggered. Entering sleep while the button is held LOW
+    // would immediately wake the board and could cause a reboot loop.
+    bool button_released = false;
+    for (int attempt = 0; attempt < 100; ++attempt) {
+        if (gpio_get_level(REFRESH_BUTTON_GPIO) == 1) {
+            vTaskDelay(pdMS_TO_TICKS(30));  // Debounce release.
+            if (gpio_get_level(REFRESH_BUTTON_GPIO) == 1) {
+                button_released = true;
+                break;
+            }
+        }
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+
+    if (button_released) {
+        ESP_ERROR_CHECK(esp_sleep_enable_ext0_wakeup(REFRESH_BUTTON_GPIO, 0));
+        ESP_LOGI(TAG, "Refresh button wakeup enabled on GPIO2 (LOW)");
+    } else {
+        // Still sleep on timer even if the button is stuck LOW.
+        ESP_LOGW(TAG, "Button held LOW; disabling button wakeup for this cycle");
+    }
+
+    vTaskDelay(pdMS_TO_TICKS(100)); // Flush log output.
     esp_deep_sleep_start();
 }
 
@@ -283,7 +316,10 @@ extern "C" void app_main(void) {
 
     // Don't trust RTC ETags following a cold boot, reset, or crash: the
     // physical display may not hold the image represented by that ETag.
-    if (wakeup != ESP_SLEEP_WAKEUP_TIMER) {
+    if (wakeup == ESP_SLEEP_WAKEUP_EXT0) {
+        ESP_LOGI(TAG, "Manual refresh requested (EE02 button 1)");
+    }
+    if (wakeup != ESP_SLEEP_WAKEUP_TIMER && wakeup != ESP_SLEEP_WAKEUP_EXT0) {
         stored_etag[0] = '\0';
     }
 
