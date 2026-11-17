@@ -5,10 +5,14 @@
 #include <cstring>
 #include <strings.h>
 
+#include "error_screen.h"
 #include "png_decoder.h"
 #include "spectra6.h"
 
 #include "driver/gpio.h"
+#include "esp_adc/adc_cali.h"
+#include "esp_adc/adc_cali_scheme.h"
+#include "esp_adc/adc_oneshot.h"
 #include "driver/rtc_io.h"
 #include "esp_attr.h"
 #include "esp_event.h"
@@ -33,9 +37,16 @@ constexpr uint32_t MIN_REFRESH_SECONDS = 30;
 constexpr uint32_t MAX_REFRESH_SECONDS = 24 * 3600;
 constexpr size_t ETAG_BUFFER_SIZE = 128;
 constexpr gpio_num_t REFRESH_BUTTON_GPIO = GPIO_NUM_2; // EE02 button 1: active-low
+constexpr gpio_num_t BATTERY_ENABLE_GPIO = GPIO_NUM_6; // EE02 ADC_EN, active-high
+constexpr adc_unit_t BATTERY_ADC_UNIT = ADC_UNIT_1;
+constexpr adc_channel_t BATTERY_ADC_CHANNEL = ADC_CHANNEL_0; // GPIO1
+constexpr adc_atten_t BATTERY_ADC_ATTEN = ADC_ATTEN_DB_12;
+constexpr int BATTERY_DIVIDER_RATIO = 2; // EE02 R28=R29=10k
 
 // RTC memory survives deep sleep, but not an ordinary power cycle.
 RTC_DATA_ATTR char stored_etag[ETAG_BUFFER_SIZE] = {};
+RTC_DATA_ATTR uint8_t consecutive_failures = 0;
+RTC_DATA_ATTR bool error_screen_visible = false;
 constexpr EventBits_t WIFI_READY = BIT0;
 constexpr EventBits_t WIFI_FAILED = BIT1;
 EventGroupHandle_t wifi_events = nullptr;
@@ -96,6 +107,83 @@ esp_err_t connect_wifi() {
         wifi_events, WIFI_READY | WIFI_FAILED,
         pdFALSE, pdFALSE, pdMS_TO_TICKS(20000));
     return (bits & WIFI_READY) ? ESP_OK : ESP_ERR_TIMEOUT;
+}
+
+// Reads the EE02's battery voltage via its switched 10k/10k divider.
+// The ADC is powered only for the duration of a measurement. No battery (or
+// an implausible reading) is reported as an error rather than as 0.00 V.
+esp_err_t read_battery_voltage_mv(int *battery_mv) {
+    if (!battery_mv) return ESP_ERR_INVALID_ARG;
+
+    // The board has an external 100k pulldown on ADC_EN, ensuring the divider
+    // is disabled at reset/deep sleep. Explicitly drive LOW when we're awake.
+    gpio_config_t enable_cfg = {};
+    enable_cfg.pin_bit_mask = 1ULL << BATTERY_ENABLE_GPIO;
+    enable_cfg.mode = GPIO_MODE_OUTPUT;
+    enable_cfg.pull_up_en = GPIO_PULLUP_DISABLE;
+    enable_cfg.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    esp_err_t err = gpio_config(&enable_cfg);
+    if (err != ESP_OK) return err;
+    ESP_ERROR_CHECK(gpio_set_level(BATTERY_ENABLE_GPIO, 0));
+
+    adc_oneshot_unit_handle_t adc = nullptr;
+    adc_cali_handle_t calibration = nullptr;
+
+    do {
+        adc_oneshot_unit_init_cfg_t unit_cfg = {};
+        unit_cfg.unit_id = BATTERY_ADC_UNIT;
+        err = adc_oneshot_new_unit(&unit_cfg, &adc);
+        if (err != ESP_OK) break;
+
+        adc_oneshot_chan_cfg_t channel_cfg = {};
+        channel_cfg.bitwidth = ADC_BITWIDTH_DEFAULT;
+        channel_cfg.atten = BATTERY_ADC_ATTEN;
+        err = adc_oneshot_config_channel(adc, BATTERY_ADC_CHANNEL, &channel_cfg);
+        if (err != ESP_OK) break;
+
+        adc_cali_curve_fitting_config_t cal_cfg = {};
+        cal_cfg.unit_id = BATTERY_ADC_UNIT;
+        cal_cfg.atten = BATTERY_ADC_ATTEN;
+        cal_cfg.bitwidth = ADC_BITWIDTH_DEFAULT;
+        err = adc_cali_create_scheme_curve_fitting(&cal_cfg, &calibration);
+        if (err != ESP_OK) break;
+
+        err = gpio_set_level(BATTERY_ENABLE_GPIO, 1);
+        if (err != ESP_OK) break;
+        vTaskDelay(pdMS_TO_TICKS(20)); // Let the switched divider settle.
+
+        constexpr int samples = 8;
+        int total_mv = 0;
+        for (int i = 0; i < samples; ++i) {
+            int adc_mv = 0;
+            err = adc_oneshot_get_calibrated_result(
+                adc, calibration, BATTERY_ADC_CHANNEL, &adc_mv);
+            if (err != ESP_OK) break;
+            total_mv += adc_mv;
+            vTaskDelay(pdMS_TO_TICKS(2));
+        }
+        if (err != ESP_OK) break;
+
+        // Battery is measured through an equal-resistor divider (factor 2).
+        const int measured_mv = (total_mv * BATTERY_DIVIDER_RATIO) / samples;
+        if (measured_mv < 2500 || measured_mv > 4500) {
+            ESP_LOGW(TAG, "Battery not detected / implausible reading: %d mV",
+                     measured_mv);
+            err = ESP_ERR_INVALID_RESPONSE;
+            break;
+        }
+
+        *battery_mv = measured_mv;
+        ESP_LOGI(TAG, "Battery voltage: %.2f V",
+                 static_cast<double>(measured_mv) / 1000.0);
+    } while (false);
+
+    // Disable the divider regardless of ADC errors (important for deep sleep).
+    const esp_err_t disable_err = gpio_set_level(BATTERY_ENABLE_GPIO, 0);
+    if (err == ESP_OK) err = disable_err;
+    if (calibration) adc_cali_delete_scheme_curve_fitting(calibration);
+    if (adc) adc_oneshot_del_unit(adc);
+    return err;
 }
 
 struct PngDownload {
@@ -162,7 +250,7 @@ esp_err_t http_event_handler(esp_http_client_event_t *event) {
     return ESP_OK;
 }
 
-esp_err_t download_png(PngDownload &png) {
+esp_err_t download_png(PngDownload &png, int battery_mv) {
     esp_http_client_config_t config = {};
     config.url = CONFIG_DASHBOARD_URL;
     config.timeout_ms = 20000;
@@ -176,6 +264,21 @@ esp_err_t download_png(PngDownload &png) {
     if (stored_etag[0] != '\0') {
         ESP_LOGI(TAG, "Sending conditional request (If-None-Match)");
         esp_http_client_set_header(client, "If-None-Match", stored_etag);
+    }
+
+    // A plain decimal voltage in volts, e.g. X-Display-Battery-Voltage: 3.87.
+    // Added to every request, even when the server may answer HTTP 304.
+    if (battery_mv >= 0) {
+        const int centivolts = (battery_mv + 5) / 10;
+        char voltage[16];
+        std::snprintf(voltage, sizeof(voltage), "%d.%02d",
+                      centivolts / 100, centivolts % 100);
+        const esp_err_t header_err = esp_http_client_set_header(
+            client, "X-Display-Battery-Voltage", voltage);
+        if (header_err != ESP_OK) {
+            esp_http_client_cleanup(client);
+            return header_err;
+        }
     }
 
     ESP_LOGI(TAG, "GET %s", CONFIG_DASHBOARD_URL);
@@ -321,6 +424,8 @@ extern "C" void app_main(void) {
     }
     if (wakeup != ESP_SLEEP_WAKEUP_TIMER && wakeup != ESP_SLEEP_WAKEUP_EXT0) {
         stored_etag[0] = '\0';
+        consecutive_failures = 0;
+        error_screen_visible = false;
     }
 
     ESP_LOGI(TAG, "PSRAM available: %u bytes",
@@ -333,15 +438,30 @@ extern "C" void app_main(void) {
     }
     ESP_ERROR_CHECK(err);
 
+    // Sample before enabling Wi-Fi to reduce ADC interference. A failed or
+    // missing battery reading must not prevent the dashboard from updating.
+    int battery_mv = -1;
+    const esp_err_t battery_err = read_battery_voltage_mv(&battery_mv);
+    if (battery_err != ESP_OK) {
+        ESP_LOGW(TAG, "Battery measurement unavailable: %s",
+                 esp_err_to_name(battery_err));
+        battery_mv = -1;
+    }
+
     uint32_t next_refresh = ERROR_RETRY_SECONDS;
+    bool update_succeeded = false;
+    ErrorScreenKind failure_kind = ErrorScreenKind::Http;
     const esp_err_t wifi_err = connect_wifi();
     if (wifi_err == ESP_OK) {
+        // Ensure the 1 MiB HTTP buffer is released before the error renderer
+        // allocates its own framebuffer in PSRAM.
         PngDownload png;
-        err = download_png(png);
+        err = download_png(png, battery_mv);
         if (err == ESP_OK) {
             if (png.http_status == 304) {
                 ESP_LOGI(TAG, "Image unchanged; skipping panel refresh");
                 next_refresh = png.next_refresh;
+                update_succeeded = true;
             } else {
                 err = render_png(png);
                 if (err == ESP_OK) {
@@ -349,14 +469,25 @@ extern "C" void app_main(void) {
                     // Missing ETag clears any previously cached value.
                     std::memcpy(stored_etag, png.etag, sizeof(stored_etag));
                     next_refresh = png.next_refresh;
+                    update_succeeded = true;
+                    error_screen_visible = false;
                     ESP_LOGI(TAG, "Image displayed successfully");
+                } else {
+                    // A failed panel update may have changed some pixels.
+                    // Avoid accepting 304 for a potentially inconsistent screen.
+                    stored_etag[0] = '\0';
+                    failure_kind = ErrorScreenKind::Image;
                 }
             }
         }
         if (err != ESP_OK) {
             ESP_LOGE(TAG, "Update failed: %s", esp_err_to_name(err));
+            // A valid HTTP 200 with invalid PNG is a rendering failure rather
+            // than a connection failure.
+            if (png.http_status == 200) failure_kind = ErrorScreenKind::Image;
         }
     } else {
+        failure_kind = ErrorScreenKind::Wifi;
         ESP_LOGE(TAG, "Wi-Fi connection failed: %s", esp_err_to_name(wifi_err));
     }
 
@@ -366,6 +497,29 @@ extern "C" void app_main(void) {
     if (stop_err != ESP_OK && stop_err != ESP_ERR_WIFI_NOT_STARTED &&
         stop_err != ESP_ERR_WIFI_NOT_INIT) {
         ESP_LOGW(TAG, "Failed to stop Wi-Fi: %s", esp_err_to_name(stop_err));
+    }
+
+    if (update_succeeded) {
+        consecutive_failures = 0;
+    } else {
+        if (consecutive_failures < UINT8_MAX) ++consecutive_failures;
+        ESP_LOGW(TAG, "Consecutive failures: %u", consecutive_failures);
+        // Keep the previous dashboard image through transient failures.
+        // Without a known image (cold boot), show the error immediately.
+        // Once an error screen is visible, don't redraw it every 5 minutes.
+        if (!error_screen_visible &&
+            (stored_etag[0] == '\0' || consecutive_failures >= 3)) {
+            ESP_LOGW(TAG, "Displaying landscape error screen");
+            const esp_err_t screen_err = show_error_screen(failure_kind);
+            // Even if the refresh failed partway through, the old ETag can no
+            // longer be trusted to describe the contents of the panel.
+            stored_etag[0] = '\0';
+            if (screen_err == ESP_OK) {
+                error_screen_visible = true;
+            } else {
+                ESP_LOGE(TAG, "Error screen failed: %s", esp_err_to_name(screen_err));
+            }
+        }
     }
 
     enter_deep_sleep(next_refresh);
