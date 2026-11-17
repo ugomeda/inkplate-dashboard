@@ -10,4 +10,30 @@ menu "Dashboard configuration"
     config DASHBOARD_URL
         string "PNG URL"
         default "http://192.168.101.13:8000/live/png"
+
+    config DASHBOARD_LOW_BATTERY_MV
+        int "Low-battery cutoff (millivolts)"
+        range 3000 4000
+        default 3400
+        help
+            Show the warning screen and stop normal updates at or below this voltage.
+            Pick a cutoff with enough margin for one full e-paper refresh.
+
+    config DASHBOARD_BATTERY_RECOVERY_MV
+        int "Voltage required to leave battery lockout (millivolts)"
+        range 3100 4300
+        default 3700
+        help
+            A sufficiently charged battery releases the lockout. The EE02 cannot
+            directly report USB VBUS or charger status to the ESP32.
+            This value must be larger than DASHBOARD_LOW_BATTERY_MV.
+
+    config DASHBOARD_BATTERY_CHECK_SECONDS
+        int "Battery measurement interval during lockout (seconds)"
+        range 60 86400
+        default 900
+        help
+            Only the ADC is sampled during lockout. No Wi-Fi or display refresh
+            occurs unless the low-battery warning has not yet been displayed.
+
 endmenu

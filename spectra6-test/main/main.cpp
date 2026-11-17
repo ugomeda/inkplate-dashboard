@@ -33,6 +33,13 @@ constexpr char TAG[] = "dashboard";
 constexpr size_t MAX_PNG_BYTES = 1024 * 1024;
 constexpr uint32_t DEFAULT_REFRESH_SECONDS = 1800;
 constexpr uint32_t ERROR_RETRY_SECONDS = 300;
+// Low-battery cutoff and recovery thresholds use hysteresis. The board has
+// no readable VBUS/charge-status GPIO, so recovery is voltage-based.
+constexpr int LOW_BATTERY_MV = CONFIG_DASHBOARD_LOW_BATTERY_MV;
+constexpr int BATTERY_RECOVERY_MV = CONFIG_DASHBOARD_BATTERY_RECOVERY_MV;
+constexpr uint32_t BATTERY_CHECK_SECONDS = CONFIG_DASHBOARD_BATTERY_CHECK_SECONDS;
+static_assert(BATTERY_RECOVERY_MV > LOW_BATTERY_MV,
+              "Battery recovery threshold must exceed low threshold");
 constexpr uint32_t MIN_REFRESH_SECONDS = 30;
 constexpr uint32_t MAX_REFRESH_SECONDS = 24 * 3600;
 constexpr size_t ETAG_BUFFER_SIZE = 128;
@@ -46,6 +53,10 @@ constexpr int BATTERY_DIVIDER_RATIO = 2; // EE02 R28=R29=10k
 // RTC memory survives deep sleep, but not an ordinary power cycle.
 RTC_DATA_ATTR char stored_etag[ETAG_BUFFER_SIZE] = {};
 RTC_DATA_ATTR uint8_t consecutive_failures = 0;
+// This lockout survives deep sleep, including GPIO2/manual wakeups.
+RTC_DATA_ATTR bool low_battery_latched = false;
+// Avoid repeatedly scanning the E Ink panel if the first warning refresh fails.
+RTC_DATA_ATTR bool low_battery_screen_attempted = false;
 // Track what the panel is believed to contain, not just whether it's an error.
 // Only commit a state after a successful full refresh; UNKNOWN means the
 // display could have been partially updated and must be repainted.
@@ -55,6 +66,7 @@ enum class DisplayContent : uint8_t {
     WifiError,
     HttpError,
     ImageError,
+    LowBattery,
 };
 RTC_DATA_ATTR DisplayContent displayed_content = DisplayContent::Unknown;
 
@@ -63,6 +75,7 @@ DisplayContent error_content(ErrorScreenKind kind) {
         case ErrorScreenKind::Wifi:  return DisplayContent::WifiError;
         case ErrorScreenKind::Http:  return DisplayContent::HttpError;
         case ErrorScreenKind::Image: return DisplayContent::ImageError;
+        case ErrorScreenKind::Battery: return DisplayContent::LowBattery;
     }
     return DisplayContent::HttpError;
 }
@@ -451,6 +464,8 @@ extern "C" void app_main(void) {
         stored_etag[0] = '\0';
         consecutive_failures = 0;
         displayed_content = DisplayContent::Unknown;
+        low_battery_latched = false;
+        low_battery_screen_attempted = false;
     }
 
     ESP_LOGI(TAG, "PSRAM available: %u bytes",
@@ -471,6 +486,59 @@ extern "C" void app_main(void) {
         ESP_LOGW(TAG, "Battery measurement unavailable: %s",
                  esp_err_to_name(battery_err));
         battery_mv = -1;
+    }
+
+    // Prioritize battery protection over *all* networking, including
+    // conditional GETs. Once latched, voltage must rise above the recovery
+    // threshold before we resume normal dashboard updates.
+    if (battery_mv >= 0 && battery_mv <= LOW_BATTERY_MV) {
+        if (!low_battery_latched) {
+            ESP_LOGW(TAG, "Battery low (%d mV <= %d mV): locking display",
+                     battery_mv, LOW_BATTERY_MV);
+            low_battery_latched = true;
+            low_battery_screen_attempted = false;
+        }
+    }
+
+    if (low_battery_latched) {
+        // If measurement fails, stay locked out. We cannot safely conclude
+        // that charging occurred from an unavailable ADC value.
+        if (battery_mv >= BATTERY_RECOVERY_MV) {
+            ESP_LOGI(TAG, "Battery recovered (%d mV >= %d mV), resuming",
+                     battery_mv, BATTERY_RECOVERY_MV);
+            low_battery_latched = false;
+            low_battery_screen_attempted = false;
+            // The panel contains a battery warning, not the old dashboard.
+            // Force an unconditional download even if the panel refresh failed.
+            stored_etag[0] = '\0';
+            consecutive_failures = 0;
+        } else {
+            if (battery_mv >= 0) {
+                ESP_LOGW(TAG, "Battery lockout: %d mV; waiting for >= %d mV",
+                         battery_mv, BATTERY_RECOVERY_MV);
+            } else {
+                ESP_LOGW(TAG, "Battery lockout: ADC unavailable; retaining lockout");
+            }
+            // Attempt the warning once per lockout. If the panel refresh
+            // fails, don't drain an already low battery by retrying it every
+            // 15 minutes. Recovery allows a normal refresh again.
+            if (!low_battery_screen_attempted &&
+                displayed_content != DisplayContent::LowBattery) {
+                low_battery_screen_attempted = true;  // Commit before scan.
+                // Refresh may fail halfway through; never trust old state.
+                displayed_content = DisplayContent::Unknown;
+                stored_etag[0] = '\0';
+                const esp_err_t screen_err = show_error_screen(ErrorScreenKind::Battery);
+                if (screen_err == ESP_OK) {
+                    displayed_content = DisplayContent::LowBattery;
+                } else {
+                    ESP_LOGE(TAG, "Low-battery screen failed: %s",
+                             esp_err_to_name(screen_err));
+                }
+            }
+            enter_deep_sleep(BATTERY_CHECK_SECONDS);
+            return;
+        }
     }
 
     uint32_t next_refresh = ERROR_RETRY_SECONDS;

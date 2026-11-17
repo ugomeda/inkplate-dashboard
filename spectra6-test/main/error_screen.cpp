@@ -15,6 +15,8 @@ extern const uint8_t error_http_png_start[] asm("_binary_error_http_png_start");
 extern const uint8_t error_http_png_end[] asm("_binary_error_http_png_end");
 extern const uint8_t error_image_png_start[] asm("_binary_error_image_png_start");
 extern const uint8_t error_image_png_end[] asm("_binary_error_image_png_end");
+extern const uint8_t error_battery_png_start[] asm("_binary_error_battery_png_start");
+extern const uint8_t error_battery_png_end[] asm("_binary_error_battery_png_end");
 
 namespace {
 constexpr char TAG[] = "error_screen";
@@ -31,6 +33,7 @@ EmbeddedPng get_error_png(ErrorScreenKind kind) {
         case ErrorScreenKind::Wifi:  return {error_wifi_png_start, error_wifi_png_end};
         case ErrorScreenKind::Http:  return {error_http_png_start, error_http_png_end};
         case ErrorScreenKind::Image: return {error_image_png_start, error_image_png_end};
+        case ErrorScreenKind::Battery: return {error_battery_png_start, error_battery_png_end};
     }
     return {error_http_png_start, error_http_png_end};
 }
