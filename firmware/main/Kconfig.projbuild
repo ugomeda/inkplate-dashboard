@@ -1,0 +1,15 @@
+menu "Dashboard configuration"
+
+    config DASHBOARD_WIFI_SSID
+        string "Wi-Fi SSID"
+        default ""
+
+    config DASHBOARD_WIFI_PASSWORD
+        string "Wi-Fi password"
+        default ""
+
+    config DASHBOARD_URL
+        string "Dashboard PNG URL"
+        default ""
+
+endmenu

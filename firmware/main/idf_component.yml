@@ -1,0 +1,5 @@
+## IDF Component Manager Manifest File
+dependencies:
+  idf:
+    version: '>=6.1.0'
+  solderedelectronics/inkplate: ==1.2.0

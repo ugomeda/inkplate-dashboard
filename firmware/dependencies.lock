@@ -1,0 +1,24 @@
+dependencies:
+  idf:
+    source:
+      type: idf
+    version: 6.1.0
+  solderedelectronics/inkplate:
+    component_hash: 3784cd5ccae00e00db789ee9dca9537a3620a7bff47d031fbd82ba9d7c0497d6
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=6.0.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    targets:
+    - esp32
+    - esp32s3
+    version: 1.2.0
+direct_dependencies:
+- idf
+- solderedelectronics/inkplate
+manifest_hash: 5acf8bfc917cac44958c7bcbc2e4c39dd6e57966751202122066ba79d7d2d59e
+target: esp32
+version: 3.0.0

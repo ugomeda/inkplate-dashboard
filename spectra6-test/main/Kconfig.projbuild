@@ -1,0 +1,13 @@
+menu "Dashboard configuration"
+    config DASHBOARD_WIFI_SSID
+        string "Wi-Fi SSID"
+        default ""
+
+    config DASHBOARD_WIFI_PASSWORD
+        string "Wi-Fi password"
+        default ""
+
+    config DASHBOARD_URL
+        string "PNG URL"
+        default "http://192.168.101.13:8000/live/png"
+endmenu

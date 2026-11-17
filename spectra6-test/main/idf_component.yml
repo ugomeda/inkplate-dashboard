@@ -1,0 +1,5 @@
+## IDF Component Manager Manifest File
+dependencies:
+  idf:
+    version: '>=4.1.0'
+  espressif/libpng: ^1.6.59~1
