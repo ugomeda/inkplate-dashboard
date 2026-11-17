@@ -46,7 +46,27 @@ constexpr int BATTERY_DIVIDER_RATIO = 2; // EE02 R28=R29=10k
 // RTC memory survives deep sleep, but not an ordinary power cycle.
 RTC_DATA_ATTR char stored_etag[ETAG_BUFFER_SIZE] = {};
 RTC_DATA_ATTR uint8_t consecutive_failures = 0;
-RTC_DATA_ATTR bool error_screen_visible = false;
+// Track what the panel is believed to contain, not just whether it's an error.
+// Only commit a state after a successful full refresh; UNKNOWN means the
+// display could have been partially updated and must be repainted.
+enum class DisplayContent : uint8_t {
+    Unknown,
+    Dashboard,
+    WifiError,
+    HttpError,
+    ImageError,
+};
+RTC_DATA_ATTR DisplayContent displayed_content = DisplayContent::Unknown;
+
+DisplayContent error_content(ErrorScreenKind kind) {
+    switch (kind) {
+        case ErrorScreenKind::Wifi:  return DisplayContent::WifiError;
+        case ErrorScreenKind::Http:  return DisplayContent::HttpError;
+        case ErrorScreenKind::Image: return DisplayContent::ImageError;
+    }
+    return DisplayContent::HttpError;
+}
+
 constexpr EventBits_t WIFI_READY = BIT0;
 constexpr EventBits_t WIFI_FAILED = BIT1;
 EventGroupHandle_t wifi_events = nullptr;
@@ -261,7 +281,7 @@ esp_err_t download_png(PngDownload &png, int battery_mv) {
     auto client = esp_http_client_init(&config);
     if (!client) return ESP_FAIL;
 
-    if (stored_etag[0] != '\0') {
+    if (displayed_content == DisplayContent::Dashboard && stored_etag[0] != '\0') {
         ESP_LOGI(TAG, "Sending conditional request (If-None-Match)");
         esp_http_client_set_header(client, "If-None-Match", stored_etag);
     }
@@ -297,7 +317,8 @@ esp_err_t download_png(PngDownload &png, int battery_mv) {
 
     if (png.http_status == 304) {
         // Never accept a 304 without a known displayed image.
-        return (stored_etag[0] != '\0' && png.size == 0) ? ESP_OK : ESP_FAIL;
+        return (displayed_content == DisplayContent::Dashboard &&
+                stored_etag[0] != '\0' && png.size == 0) ? ESP_OK : ESP_FAIL;
     }
 
     if (png.http_status != 200 || png.size < 26 ||
@@ -339,7 +360,8 @@ uint8_t closest_panel_color(uint8_t r, uint8_t g, uint8_t b) {
     return best_code;
 }
 
-esp_err_t render_png(const PngDownload &download) {
+esp_err_t render_png(const PngDownload &download, bool &panel_update_attempted) {
+    panel_update_attempted = false;
     indexed_png_t image = {};
     esp_err_t err = decode_indexed_png(download.data, download.size, &image);
     if (err != ESP_OK) {
@@ -357,6 +379,9 @@ esp_err_t render_png(const PngDownload &download) {
         mapping[i] = closest_panel_color(rgb[0], rgb[1], rgb[2]);
     }
 
+    // From this point onward a failed operation may leave the physical screen
+    // partially changed. The caller must not trust its previous screen state.
+    panel_update_attempted = true;
     Spectra6 display;
     err = display.init();
     if (err == ESP_OK) {
@@ -425,7 +450,7 @@ extern "C" void app_main(void) {
     if (wakeup != ESP_SLEEP_WAKEUP_TIMER && wakeup != ESP_SLEEP_WAKEUP_EXT0) {
         stored_etag[0] = '\0';
         consecutive_failures = 0;
-        error_screen_visible = false;
+        displayed_content = DisplayContent::Unknown;
     }
 
     ESP_LOGI(TAG, "PSRAM available: %u bytes",
@@ -463,19 +488,23 @@ extern "C" void app_main(void) {
                 next_refresh = png.next_refresh;
                 update_succeeded = true;
             } else {
-                err = render_png(png);
+                bool panel_update_attempted = false;
+                err = render_png(png, panel_update_attempted);
+                if (panel_update_attempted) {
+                    displayed_content = DisplayContent::Unknown;
+                    stored_etag[0] = '\0';
+                }
                 if (err == ESP_OK) {
                     // Commit ETag only after the panel has refreshed AND slept.
                     // Missing ETag clears any previously cached value.
                     std::memcpy(stored_etag, png.etag, sizeof(stored_etag));
                     next_refresh = png.next_refresh;
                     update_succeeded = true;
-                    error_screen_visible = false;
+                    displayed_content = DisplayContent::Dashboard;
                     ESP_LOGI(TAG, "Image displayed successfully");
                 } else {
-                    // A failed panel update may have changed some pixels.
-                    // Avoid accepting 304 for a potentially inconsistent screen.
-                    stored_etag[0] = '\0';
+                    // Decode failures leave the previous picture untouched;
+                    // display/driver failures above invalidate our screen state.
                     failure_kind = ErrorScreenKind::Image;
                 }
             }
@@ -504,18 +533,24 @@ extern "C" void app_main(void) {
     } else {
         if (consecutive_failures < UINT8_MAX) ++consecutive_failures;
         ESP_LOGW(TAG, "Consecutive failures: %u", consecutive_failures);
-        // Keep the previous dashboard image through transient failures.
-        // Without a known image (cold boot), show the error immediately.
-        // Once an error screen is visible, don't redraw it every 5 minutes.
-        if (!error_screen_visible &&
-            (stored_etag[0] == '\0' || consecutive_failures >= 3)) {
-            ESP_LOGW(TAG, "Displaying landscape error screen");
-            const esp_err_t screen_err = show_error_screen(failure_kind);
-            // Even if the refresh failed partway through, the old ETag can no
-            // longer be trusted to describe the contents of the panel.
+        const DisplayContent requested_error = error_content(failure_kind);
+        // Hold a known dashboard through two transient failures. Otherwise,
+        // immediately display the correct error type when the screen is empty,
+        // unknown, or already showing a different error.
+        const bool should_show_error =
+            (displayed_content != requested_error) &&
+            (displayed_content != DisplayContent::Dashboard || consecutive_failures >= 3);
+
+        if (should_show_error) {
+            ESP_LOGW(TAG, "Displaying error screen (type=%u)",
+                     static_cast<unsigned>(requested_error));
+            // The refresh may fail partway through. Mark the state unknown
+            // BEFORE starting, so the next wakeup retries the screen.
+            displayed_content = DisplayContent::Unknown;
             stored_etag[0] = '\0';
+            const esp_err_t screen_err = show_error_screen(failure_kind);
             if (screen_err == ESP_OK) {
-                error_screen_visible = true;
+                displayed_content = requested_error;
             } else {
                 ESP_LOGE(TAG, "Error screen failed: %s", esp_err_to_name(screen_err));
             }
