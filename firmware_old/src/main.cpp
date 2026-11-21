@@ -8,7 +8,8 @@
 #define MAX_ETAG_LENGTH 255
 
 #if !defined(ARDUINO_INKPLATE10) && !defined(ARDUINO_INKPLATE10V2)
-#error "Wrong board selection for this example, please select e-radionica Inkplate10 or Soldered Inkplate10 in the boards menu."
+#error                                                                         \
+    "Wrong board selection for this example, please select e-radionica Inkplate10 or Soldered Inkplate10 in the boards menu."
 #endif
 
 #define uS_TO_S_FACTOR 1000000 // Conversion factor for micro seconds to seconds
@@ -102,7 +103,8 @@ void load_and_display_image() {
   if (strlen(etag)) {
     http.addHeader("If-None-Match", etag);
   }
-  const char *headerkeys[] = {"content-type", "etag", "x-inkplate-next-refresh"};
+  const char *headerkeys[] = {"content-type", "etag",
+                              "x-inkplate-next-refresh"};
   http.collectHeaders(headerkeys, 3);
 
   // Launch request and check result
@@ -221,5 +223,4 @@ void setup() {
   return go_back_to_sleep(sleep_duration);
 }
 
-void loop() {
-}
+void loop() {}

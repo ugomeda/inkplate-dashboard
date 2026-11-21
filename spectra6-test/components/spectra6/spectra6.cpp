@@ -18,7 +18,7 @@
 namespace {
 constexpr char TAG[] = "spectra6";
 constexpr spi_host_device_t SPI_HOST = SPI2_HOST;
-constexpr int SPI_CLOCK_HZ = 8 * 1000 * 1000; // conservative bring-up speed
+constexpr int SPI_CLOCK_HZ = 8 * 1000 * 1000;          // conservative bring-up speed
 constexpr size_t HALF_ROW_BYTES = Spectra6::WIDTH / 4; // 600 pixels at 4 bpp
 
 // Controller command bytes derived from the Seeed_GFX T133A01 driver.
@@ -29,12 +29,9 @@ constexpr uint8_t DRF = 0x12;
 constexpr uint8_t POF = 0x02;
 constexpr uint8_t DTM = 0x10;
 
-
 esp_err_t output_pin(int pin, int initial_level) {
-    ESP_RETURN_ON_ERROR(gpio_reset_pin(static_cast<gpio_num_t>(pin)), TAG,
-                        "GPIO reset failed");
-    ESP_RETURN_ON_ERROR(gpio_set_direction(static_cast<gpio_num_t>(pin), GPIO_MODE_OUTPUT),
-                        TAG, "GPIO direction failed");
+    ESP_RETURN_ON_ERROR(gpio_reset_pin(static_cast<gpio_num_t>(pin)), TAG, "GPIO reset failed");
+    ESP_RETURN_ON_ERROR(gpio_set_direction(static_cast<gpio_num_t>(pin), GPIO_MODE_OUTPUT), TAG, "GPIO direction failed");
     return gpio_set_level(static_cast<gpio_num_t>(pin), initial_level);
 }
 } // namespace
@@ -50,7 +47,8 @@ void Spectra6::deselect() {
 }
 
 esp_err_t Spectra6::transmit(const uint8_t* data, size_t length) {
-    if (!length) return ESP_OK;
+    if (!length)
+        return ESP_OK;
     spi_transaction_t transaction = {};
     transaction.length = length * 8;
     if (length <= sizeof(transaction.tx_data)) {
@@ -62,8 +60,7 @@ esp_err_t Spectra6::transmit(const uint8_t* data, size_t length) {
     return spi_device_transmit(static_cast<spi_device_handle_t>(spi_device_), &transaction);
 }
 
-esp_err_t Spectra6::send_command(Chip chip, uint8_t command,
-                                 const uint8_t* data, size_t length) {
+esp_err_t Spectra6::send_command(Chip chip, uint8_t command, const uint8_t* data, size_t length) {
     select(chip);
     gpio_set_level(static_cast<gpio_num_t>(EPD_DC), 0);
     esp_err_t err = transmit(&command, 1);
@@ -95,8 +92,7 @@ esp_err_t Spectra6::init() {
     ESP_RETURN_ON_ERROR(output_pin(EPD_DC, 1), TAG, "DC");
     ESP_RETURN_ON_ERROR(output_pin(EPD_RESET, 1), TAG, "RESET");
     ESP_RETURN_ON_ERROR(output_pin(EPD_POWER, 1), TAG, "POWER");
-    ESP_RETURN_ON_ERROR(gpio_set_direction(static_cast<gpio_num_t>(EPD_BUSY), GPIO_MODE_INPUT),
-                        TAG, "BUSY");
+    ESP_RETURN_ON_ERROR(gpio_set_direction(static_cast<gpio_num_t>(EPD_BUSY), GPIO_MODE_INPUT), TAG, "BUSY");
     vTaskDelay(pdMS_TO_TICKS(100));
 
     spi_bus_config_t bus = {};
@@ -126,26 +122,25 @@ esp_err_t Spectra6::init() {
     // T133A01 initialization in the order used by Seeed_GFX.
     // Chip::Both corresponds to the Seeed code holding CS1 LOW while
     // its SPI writer also asserts CS0. Keep this sequence unchanged initially.
-    auto cmd = [this](Chip chip, uint8_t reg,
-                      std::initializer_list<uint8_t> values) -> esp_err_t {
+    auto cmd = [this](Chip chip, uint8_t reg, std::initializer_list<uint8_t> values) -> esp_err_t {
         return send_command(chip, reg, values.begin(), values.size());
     };
 
-    ESP_RETURN_ON_ERROR(cmd(Chip::Master, 0x74, {0x00,0x0C,0x0C,0xD9,0xDD,0xDD,0x15,0x15,0x55}), TAG, "0x74");
-    ESP_RETURN_ON_ERROR(cmd(Chip::Both,   0xF0, {0x49,0x55,0x13,0x5D,0x05,0x10}), TAG, "0xF0");
-    ESP_RETURN_ON_ERROR(cmd(Chip::Both,   0x00, {0xDF,0x69}), TAG, "PSR");
-    ESP_RETURN_ON_ERROR(cmd(Chip::Both,   0x30, {0x08}), TAG, "PLL");
-    ESP_RETURN_ON_ERROR(cmd(Chip::Master, 0xA5, {0x44,0x54,0x00}), TAG, "DCDC");
-    ESP_RETURN_ON_ERROR(cmd(Chip::Both,   0x50, {0x37}), TAG, "CDI");
-    ESP_RETURN_ON_ERROR(cmd(Chip::Both,   0x60, {0x03,0x03}), TAG, "0x60");
-    ESP_RETURN_ON_ERROR(cmd(Chip::Both,   0x86, {0x10}), TAG, "0x86");
-    ESP_RETURN_ON_ERROR(cmd(Chip::Both,   0xE3, {0x22}), TAG, "PWS");
-    ESP_RETURN_ON_ERROR(cmd(Chip::Both,   0x61, {0x04,0xB0,0x03,0x20}), TAG, "TRES");
-    ESP_RETURN_ON_ERROR(cmd(Chip::Master, 0x01, {0x0F,0x00,0x28,0x2C,0x28,0x38}), TAG, "PWR");
+    ESP_RETURN_ON_ERROR(cmd(Chip::Master, 0x74, {0x00, 0x0C, 0x0C, 0xD9, 0xDD, 0xDD, 0x15, 0x15, 0x55}), TAG, "0x74");
+    ESP_RETURN_ON_ERROR(cmd(Chip::Both, 0xF0, {0x49, 0x55, 0x13, 0x5D, 0x05, 0x10}), TAG, "0xF0");
+    ESP_RETURN_ON_ERROR(cmd(Chip::Both, 0x00, {0xDF, 0x69}), TAG, "PSR");
+    ESP_RETURN_ON_ERROR(cmd(Chip::Both, 0x30, {0x08}), TAG, "PLL");
+    ESP_RETURN_ON_ERROR(cmd(Chip::Master, 0xA5, {0x44, 0x54, 0x00}), TAG, "DCDC");
+    ESP_RETURN_ON_ERROR(cmd(Chip::Both, 0x50, {0x37}), TAG, "CDI");
+    ESP_RETURN_ON_ERROR(cmd(Chip::Both, 0x60, {0x03, 0x03}), TAG, "0x60");
+    ESP_RETURN_ON_ERROR(cmd(Chip::Both, 0x86, {0x10}), TAG, "0x86");
+    ESP_RETURN_ON_ERROR(cmd(Chip::Both, 0xE3, {0x22}), TAG, "PWS");
+    ESP_RETURN_ON_ERROR(cmd(Chip::Both, 0x61, {0x04, 0xB0, 0x03, 0x20}), TAG, "TRES");
+    ESP_RETURN_ON_ERROR(cmd(Chip::Master, 0x01, {0x0F, 0x00, 0x28, 0x2C, 0x28, 0x38}), TAG, "PWR");
     ESP_RETURN_ON_ERROR(cmd(Chip::Master, 0xB6, {0x07}), TAG, "0xB6");
-    ESP_RETURN_ON_ERROR(cmd(Chip::Master, 0x06, {0xE0,0x20}), TAG, "BTST_P");
+    ESP_RETURN_ON_ERROR(cmd(Chip::Master, 0x06, {0xE0, 0x20}), TAG, "BTST_P");
     ESP_RETURN_ON_ERROR(cmd(Chip::Master, 0xB7, {0x01}), TAG, "0xB7");
-    ESP_RETURN_ON_ERROR(cmd(Chip::Master, 0x05, {0xE0,0x20}), TAG, "BTST_N");
+    ESP_RETURN_ON_ERROR(cmd(Chip::Master, 0x05, {0xE0, 0x20}), TAG, "BTST_N");
     ESP_RETURN_ON_ERROR(cmd(Chip::Master, 0xB0, {0x01}), TAG, "0xB0");
     ESP_RETURN_ON_ERROR(cmd(Chip::Master, 0xB1, {0x02}), TAG, "0xB1");
 
@@ -156,9 +151,9 @@ esp_err_t Spectra6::init() {
 esp_err_t Spectra6::stream_test_half(Chip chip, int x_offset) {
     // One DMA-safe row buffer. The full 960 KB framebuffer isn't necessary
     // for the first bring-up test.
-    auto* row = static_cast<uint8_t*>(
-        heap_caps_malloc(HALF_ROW_BYTES, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL));
-    if (!row) return ESP_ERR_NO_MEM;
+    auto* row = static_cast<uint8_t*>(heap_caps_malloc(HALF_ROW_BYTES, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL));
+    if (!row)
+        return ESP_ERR_NO_MEM;
 
     // T133A01 hardware color codes: black, white, yellow, red, blue, green.
     constexpr uint8_t colors[6] = {0x0, 0x1, 0x2, 0x3, 0x5, 0x6};
@@ -216,12 +211,11 @@ esp_err_t Spectra6::refresh_image() {
     return ESP_OK;
 }
 
-esp_err_t Spectra6::stream_indexed_half(
-    Chip chip, int x_offset, const uint8_t *pixels, unsigned bitdepth,
-    const uint8_t palette_to_hw[256]) {
-    auto *row = static_cast<uint8_t *>(
-        heap_caps_malloc(HALF_ROW_BYTES, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL));
-    if (!row) return ESP_ERR_NO_MEM;
+esp_err_t Spectra6::stream_indexed_half(Chip chip, int x_offset, const uint8_t* pixels, unsigned bitdepth,
+                                        const uint8_t palette_to_hw[256]) {
+    auto* row = static_cast<uint8_t*>(heap_caps_malloc(HALF_ROW_BYTES, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL));
+    if (!row)
+        return ESP_ERR_NO_MEM;
 
     select(chip);
     gpio_set_level(static_cast<gpio_num_t>(EPD_DC), 0);
@@ -236,14 +230,12 @@ esp_err_t Spectra6::stream_indexed_half(
             const size_t start = static_cast<size_t>(y) * (WIDTH / 2) + x_offset / 2;
             for (size_t i = 0; i < HALF_ROW_BYTES; ++i) {
                 const uint8_t value = pixels[start + i];
-                row[i] = (palette_to_hw[value >> 4] << 4) |
-                          palette_to_hw[value & 0x0F];
+                row[i] = (palette_to_hw[value >> 4] << 4) | palette_to_hw[value & 0x0F];
             }
         } else {
             const size_t start = static_cast<size_t>(y) * WIDTH + x_offset;
             for (size_t i = 0; i < HALF_ROW_BYTES; ++i) {
-                row[i] = (palette_to_hw[pixels[start + 2 * i]] << 4) |
-                          palette_to_hw[pixels[start + 2 * i + 1]];
+                row[i] = (palette_to_hw[pixels[start + 2 * i]] << 4) | palette_to_hw[pixels[start + 2 * i + 1]];
             }
         }
         err = transmit(row, HALF_ROW_BYTES);
@@ -254,18 +246,15 @@ esp_err_t Spectra6::stream_indexed_half(
     return err;
 }
 
-esp_err_t Spectra6::show_indexed_image(
-    const uint8_t *pixels, unsigned bitdepth, const uint8_t palette_to_hw[256]) {
+esp_err_t Spectra6::show_indexed_image(const uint8_t* pixels, unsigned bitdepth, const uint8_t palette_to_hw[256]) {
     if (!pixels || !palette_to_hw || (bitdepth != 4 && bitdepth != 8)) {
         return ESP_ERR_INVALID_ARG;
     }
     ESP_RETURN_ON_ERROR(begin_image(), TAG, "Prepare image");
     ESP_LOGI(TAG, "Writing indexed master half");
-    ESP_RETURN_ON_ERROR(stream_indexed_half(Chip::Master, 0, pixels, bitdepth, palette_to_hw),
-                        TAG, "Master image write");
+    ESP_RETURN_ON_ERROR(stream_indexed_half(Chip::Master, 0, pixels, bitdepth, palette_to_hw), TAG, "Master image write");
     ESP_LOGI(TAG, "Writing indexed slave half");
-    ESP_RETURN_ON_ERROR(stream_indexed_half(Chip::Slave, WIDTH / 2, pixels, bitdepth, palette_to_hw),
-                        TAG, "Slave image write");
+    ESP_RETURN_ON_ERROR(stream_indexed_half(Chip::Slave, WIDTH / 2, pixels, bitdepth, palette_to_hw), TAG, "Slave image write");
     return refresh_image();
 }
 
