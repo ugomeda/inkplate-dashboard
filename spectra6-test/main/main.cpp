@@ -21,12 +21,12 @@
 #include "esp_log.h"
 #include "esp_netif.h"
 #include "esp_sleep.h"
-#include "esp_wifi.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include "freertos/task.h"
 #include "nvs_flash.h"
 #include "sdkconfig.h"
+#include "wifi.h"
 
 namespace {
 constexpr char TAG[] = "dashboard";
@@ -49,97 +49,13 @@ constexpr adc_channel_t BATTERY_ADC_CHANNEL = ADC_CHANNEL_0; // GPIO1
 constexpr adc_atten_t BATTERY_ADC_ATTEN = ADC_ATTEN_DB_12;
 constexpr int BATTERY_DIVIDER_RATIO = 2; // EE02 R28=R29=10k
 
-// RTC memory survives deep sleep, but not an ordinary power cycle.
-RTC_DATA_ATTR char stored_etag[ETAG_BUFFER_SIZE] = {};
-RTC_DATA_ATTR uint8_t consecutive_failures = 0;
-// This lockout survives deep sleep, including GPIO2/manual wakeups.
-RTC_DATA_ATTR bool low_battery_latched = false;
-// Avoid repeatedly scanning the E Ink panel if the first warning refresh fails.
-RTC_DATA_ATTR bool low_battery_screen_attempted = false;
-// Track what the panel is believed to contain, not just whether it's an error.
-// Only commit a state after a successful full refresh; UNKNOWN means the
-// display could have been partially updated and must be repainted.
-enum class DisplayContent : uint8_t {
-    Unknown,
-    Dashboard,
-    WifiError,
-    HttpError,
-    ImageError,
-    LowBattery,
-};
+enum class DisplayContent : uint8_t { Unknown, Dashboard, Error };
+
+// Persisted state
 RTC_DATA_ATTR DisplayContent displayed_content = DisplayContent::Unknown;
-
-DisplayContent error_content(ErrorScreenKind kind) {
-    switch (kind) {
-    case ErrorScreenKind::Wifi:
-        return DisplayContent::WifiError;
-    case ErrorScreenKind::Http:
-        return DisplayContent::HttpError;
-    case ErrorScreenKind::Image:
-        return DisplayContent::ImageError;
-    case ErrorScreenKind::Battery:
-        return DisplayContent::LowBattery;
-    }
-    return DisplayContent::HttpError;
-}
-
-constexpr EventBits_t WIFI_READY = BIT0;
-constexpr EventBits_t WIFI_FAILED = BIT1;
-EventGroupHandle_t wifi_events = nullptr;
-int wifi_retries = 0;
-bool wifi_stopping = false;
-
-void wifi_event_handler(void*, esp_event_base_t base, int32_t id, void* data) {
-    if (base == WIFI_EVENT && id == WIFI_EVENT_STA_START) {
-        esp_wifi_connect();
-    } else if (base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED) {
-        if (wifi_stopping)
-            return; // Do not reconnect during intentional shutdown.
-        auto* event = static_cast<wifi_event_sta_disconnected_t*>(data);
-        ESP_LOGW(TAG, "Wi-Fi disconnected (reason=%u, RSSI=%d)", static_cast<unsigned>(event->reason), event->rssi);
-        xEventGroupClearBits(wifi_events, WIFI_READY);
-        if (wifi_retries++ < 5) {
-            esp_wifi_connect();
-        } else {
-            xEventGroupSetBits(wifi_events, WIFI_FAILED);
-        }
-    } else if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
-        auto* event = static_cast<ip_event_got_ip_t*>(data);
-        ESP_LOGI(TAG, "Connected: " IPSTR, IP2STR(&event->ip_info.ip));
-        wifi_retries = 0;
-        xEventGroupSetBits(wifi_events, WIFI_READY);
-    }
-}
-
-esp_err_t connect_wifi() {
-    wifi_events = xEventGroupCreate();
-    if (!wifi_events)
-        return ESP_ERR_NO_MEM;
-
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-    if (!esp_netif_create_default_wifi_sta())
-        return ESP_FAIL;
-
-    wifi_init_config_t init = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&init));
-    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, wifi_event_handler, nullptr));
-    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, wifi_event_handler, nullptr));
-
-    wifi_config_t wifi = {};
-    static_assert(sizeof(CONFIG_DASHBOARD_WIFI_SSID) - 1 <= sizeof(wifi.sta.ssid));
-    static_assert(sizeof(CONFIG_DASHBOARD_WIFI_PASSWORD) - 1 <= sizeof(wifi.sta.password));
-    std::memcpy(wifi.sta.ssid, CONFIG_DASHBOARD_WIFI_SSID, sizeof(CONFIG_DASHBOARD_WIFI_SSID) - 1);
-    std::memcpy(wifi.sta.password, CONFIG_DASHBOARD_WIFI_PASSWORD, sizeof(CONFIG_DASHBOARD_WIFI_PASSWORD) - 1);
-
-    ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi));
-    ESP_ERROR_CHECK(esp_wifi_start());
-
-    const EventBits_t bits = xEventGroupWaitBits(wifi_events, WIFI_READY | WIFI_FAILED, pdFALSE, pdFALSE, pdMS_TO_TICKS(20000));
-    return (bits & WIFI_READY) ? ESP_OK : ESP_ERR_TIMEOUT;
-}
+RTC_DATA_ATTR ErrorScreenKind displayed_error = ErrorScreenKind::None;
+RTC_DATA_ATTR char stored_etag[ETAG_BUFFER_SIZE] = {};
+RTC_DATA_ATTR bool battery_low_level = false;
 
 // Reads the EE02's battery voltage via its switched 10k/10k divider.
 // The ADC is powered only for the duration of a measurement. No battery (or
@@ -412,8 +328,6 @@ esp_err_t render_png(const PngDownload& download, bool& panel_update_attempted) 
     return err;
 }
 
-} // namespace
-
 static void enter_deep_sleep(uint32_t seconds) {
     ESP_LOGI(TAG, "Sleeping for %lu seconds", static_cast<unsigned long>(seconds));
 
@@ -455,171 +369,135 @@ static void enter_deep_sleep(uint32_t seconds) {
     esp_deep_sleep_start();
 }
 
-extern "C" void app_main(void) {
+static void show_error(ErrorScreenKind error) {
+    if (displayed_content == DisplayContent::Error && displayed_error == error) {
+        return; // Screen already up to date
+    }
+
+    displayed_content = DisplayContent::Unknown;
+    stored_etag[0] = '\0';
+
+    const esp_err_t screen_err = show_error_screen(error);
+    if (screen_err == ESP_OK) {
+        displayed_content = DisplayContent::Error;
+        displayed_error = error;
+    } else {
+        ESP_LOGE(TAG, "Error screen failed: %s", esp_err_to_name(screen_err));
+    }
+}
+
+static void handle_wakeup() {
     const esp_sleep_wakeup_cause_t wakeup = esp_sleep_get_wakeup_cause();
     ESP_LOGI(TAG, "Spectra 6 wakeup cause: %d", static_cast<int>(wakeup));
-
-    // Don't trust RTC ETags following a cold boot, reset, or crash: the
-    // physical display may not hold the image represented by that ETag.
     if (wakeup == ESP_SLEEP_WAKEUP_EXT0) {
         ESP_LOGI(TAG, "Manual refresh requested (EE02 button 1)");
     }
     if (wakeup != ESP_SLEEP_WAKEUP_TIMER && wakeup != ESP_SLEEP_WAKEUP_EXT0) {
+        // Reset state following a cold boot, reset, or crash
         stored_etag[0] = '\0';
-        consecutive_failures = 0;
         displayed_content = DisplayContent::Unknown;
-        low_battery_latched = false;
-        low_battery_screen_attempted = false;
+        displayed_error = ErrorScreenKind::None;
+        battery_low_level = false;
     }
+}
 
-    ESP_LOGI(TAG, "PSRAM available: %u bytes", static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_SPIRAM)));
-
+static void initialize_nvram() {
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
         err = nvs_flash_init();
     }
     ESP_ERROR_CHECK(err);
+}
 
-    // Sample before enabling Wi-Fi to reduce ADC interference. A failed or
-    // missing battery reading must not prevent the dashboard from updating.
+static int update_battery_state() {
+    // Read battery voltage
     int battery_mv = -1;
     const esp_err_t battery_err = read_battery_voltage_mv(&battery_mv);
     if (battery_err != ESP_OK) {
         ESP_LOGW(TAG, "Battery measurement unavailable: %s", esp_err_to_name(battery_err));
-        battery_mv = -1;
     }
 
-    // Prioritize battery protection over *all* networking, including
-    // conditional GETs. Once latched, voltage must rise above the recovery
-    // threshold before we resume normal dashboard updates.
-    if (battery_mv >= 0 && battery_mv <= LOW_BATTERY_MV) {
-        if (!low_battery_latched) {
-            ESP_LOGW(TAG, "Battery low (%d mV <= %d mV): locking display", battery_mv, LOW_BATTERY_MV);
-            low_battery_latched = true;
-            low_battery_screen_attempted = false;
-        }
+    // Lock the display if battery if below level
+    else if (!battery_low_level && battery_mv <= LOW_BATTERY_MV) {
+        ESP_LOGW(TAG, "Battery low (%d mV <= %d mV): locking display", battery_mv, LOW_BATTERY_MV);
+        battery_low_level = true;
     }
 
-    if (low_battery_latched) {
-        // If measurement fails, stay locked out. We cannot safely conclude
-        // that charging occurred from an unavailable ADC value.
-        if (battery_mv >= BATTERY_RECOVERY_MV) {
-            ESP_LOGI(TAG, "Battery recovered (%d mV >= %d mV), resuming", battery_mv, BATTERY_RECOVERY_MV);
-            low_battery_latched = false;
-            low_battery_screen_attempted = false;
-            // The panel contains a battery warning, not the old dashboard.
-            // Force an unconditional download even if the panel refresh failed.
-            stored_etag[0] = '\0';
-            consecutive_failures = 0;
+    // Unlock the display if battery above recovery level
+    else if (battery_low_level && battery_mv >= BATTERY_RECOVERY_MV) {
+        ESP_LOGI(TAG, "Battery recovered (%d mV >= %d mV), resuming", battery_mv, BATTERY_RECOVERY_MV);
+        battery_low_level = false;
+    }
+
+    return battery_mv;
+}
+} // namespace
+
+extern "C" void app_main(void) {
+    // Board initialization
+    handle_wakeup();
+    initialize_nvram();
+
+    // Battery management
+    int battery_mv = update_battery_state();
+    if (battery_low_level) {
+        show_error(ErrorScreenKind::LowBattery);
+        enter_deep_sleep(BATTERY_CHECK_SECONDS);
+        return;
+    }
+
+    // Connect to wifi
+    const esp_err_t wifi_err = connect_wifi();
+    if (wifi_err != ESP_OK) {
+        stop_wifi();
+        show_error(ErrorScreenKind::WifiUnavailable);
+        enter_deep_sleep(ERROR_RETRY_SECONDS);
+        return;
+    }
+
+    // Ensure the 1 MiB HTTP buffer is released before the error renderer
+    // allocates its own framebuffer in PSRAM.
+    PngDownload png;
+    ErrorScreenKind failure_kind = ErrorScreenKind::None;
+    esp_err_t err = download_png(png, battery_mv);
+    int next_refresh = 0;
+    if (err == ESP_OK) {
+        if (png.http_status == 304) {
+            ESP_LOGI(TAG, "Image unchanged; skipping panel refresh");
+            next_refresh = png.next_refresh;
         } else {
-            if (battery_mv >= 0) {
-                ESP_LOGW(TAG, "Battery lockout: %d mV; waiting for >= %d mV", battery_mv, BATTERY_RECOVERY_MV);
-            } else {
-                ESP_LOGW(TAG, "Battery lockout: ADC unavailable; retaining lockout");
-            }
-            // Attempt the warning once per lockout. If the panel refresh
-            // fails, don't drain an already low battery by retrying it every
-            // 15 minutes. Recovery allows a normal refresh again.
-            if (!low_battery_screen_attempted && displayed_content != DisplayContent::LowBattery) {
-                low_battery_screen_attempted = true; // Commit before scan.
-                // Refresh may fail halfway through; never trust old state.
+            bool panel_update_attempted = false;
+            err = render_png(png, panel_update_attempted);
+            if (panel_update_attempted) {
                 displayed_content = DisplayContent::Unknown;
                 stored_etag[0] = '\0';
-                const esp_err_t screen_err = show_error_screen(ErrorScreenKind::Battery);
-                if (screen_err == ESP_OK) {
-                    displayed_content = DisplayContent::LowBattery;
-                } else {
-                    ESP_LOGE(TAG, "Low-battery screen failed: %s", esp_err_to_name(screen_err));
-                }
             }
-            enter_deep_sleep(BATTERY_CHECK_SECONDS);
-            return;
-        }
-    }
-
-    uint32_t next_refresh = ERROR_RETRY_SECONDS;
-    bool update_succeeded = false;
-    ErrorScreenKind failure_kind = ErrorScreenKind::Http;
-    const esp_err_t wifi_err = connect_wifi();
-    if (wifi_err == ESP_OK) {
-        // Ensure the 1 MiB HTTP buffer is released before the error renderer
-        // allocates its own framebuffer in PSRAM.
-        PngDownload png;
-        err = download_png(png, battery_mv);
-        if (err == ESP_OK) {
-            if (png.http_status == 304) {
-                ESP_LOGI(TAG, "Image unchanged; skipping panel refresh");
+            if (err == ESP_OK) {
+                // Commit ETag only after the panel has refreshed AND slept.
+                // Missing ETag clears any previously cached value.
+                std::memcpy(stored_etag, png.etag, sizeof(stored_etag));
                 next_refresh = png.next_refresh;
-                update_succeeded = true;
+                displayed_content = DisplayContent::Dashboard;
+                ESP_LOGI(TAG, "Image displayed successfully");
             } else {
-                bool panel_update_attempted = false;
-                err = render_png(png, panel_update_attempted);
-                if (panel_update_attempted) {
-                    displayed_content = DisplayContent::Unknown;
-                    stored_etag[0] = '\0';
-                }
-                if (err == ESP_OK) {
-                    // Commit ETag only after the panel has refreshed AND slept.
-                    // Missing ETag clears any previously cached value.
-                    std::memcpy(stored_etag, png.etag, sizeof(stored_etag));
-                    next_refresh = png.next_refresh;
-                    update_succeeded = true;
-                    displayed_content = DisplayContent::Dashboard;
-                    ESP_LOGI(TAG, "Image displayed successfully");
-                } else {
-                    // Decode failures leave the previous picture untouched;
-                    // display/driver failures above invalidate our screen state.
-                    failure_kind = ErrorScreenKind::Image;
-                }
-            }
-        }
-        if (err != ESP_OK) {
-            ESP_LOGE(TAG, "Update failed: %s", esp_err_to_name(err));
-            // A valid HTTP 200 with invalid PNG is a rendering failure rather
-            // than a connection failure.
-            if (png.http_status == 200)
-                failure_kind = ErrorScreenKind::Image;
-        }
-    } else {
-        failure_kind = ErrorScreenKind::Wifi;
-        ESP_LOGE(TAG, "Wi-Fi connection failed: %s", esp_err_to_name(wifi_err));
-    }
-
-    // A deliberate stop emits a disconnect event; don't reconnect then.
-    wifi_stopping = true;
-    const esp_err_t stop_err = esp_wifi_stop();
-    if (stop_err != ESP_OK && stop_err != ESP_ERR_WIFI_NOT_STARTED && stop_err != ESP_ERR_WIFI_NOT_INIT) {
-        ESP_LOGW(TAG, "Failed to stop Wi-Fi: %s", esp_err_to_name(stop_err));
-    }
-
-    if (update_succeeded) {
-        consecutive_failures = 0;
-    } else {
-        if (consecutive_failures < UINT8_MAX)
-            ++consecutive_failures;
-        ESP_LOGW(TAG, "Consecutive failures: %u", consecutive_failures);
-        const DisplayContent requested_error = error_content(failure_kind);
-        // Hold a known dashboard through two transient failures. Otherwise,
-        // immediately display the correct error type when the screen is empty,
-        // unknown, or already showing a different error.
-        const bool should_show_error =
-            (displayed_content != requested_error) && (displayed_content != DisplayContent::Dashboard || consecutive_failures >= 3);
-
-        if (should_show_error) {
-            ESP_LOGW(TAG, "Displaying error screen (type=%u)", static_cast<unsigned>(requested_error));
-            // The refresh may fail partway through. Mark the state unknown
-            // BEFORE starting, so the next wakeup retries the screen.
-            displayed_content = DisplayContent::Unknown;
-            stored_etag[0] = '\0';
-            const esp_err_t screen_err = show_error_screen(failure_kind);
-            if (screen_err == ESP_OK) {
-                displayed_content = requested_error;
-            } else {
-                ESP_LOGE(TAG, "Error screen failed: %s", esp_err_to_name(screen_err));
+                // Decode failures leave the previous picture untouched;
+                // display/driver failures above invalidate our screen state.
+                failure_kind = ErrorScreenKind::ImageDecodeFailed;
             }
         }
     }
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Update failed: %s", esp_err_to_name(err));
+        // A valid HTTP 200 with invalid PNG is a rendering failure rather
+        // than a connection failure.
+        if (png.http_status == 200)
+            failure_kind = ErrorScreenKind::ImageDecodeFailed;
+    }
 
+    stop_wifi();
+    if (failure_kind != ErrorScreenKind::None) {
+        show_error(failure_kind);
+    }
     enter_deep_sleep(next_refresh);
 }

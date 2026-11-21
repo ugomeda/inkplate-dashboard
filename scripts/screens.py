@@ -62,6 +62,11 @@ ERROR_SCREENS = {
         title="Connection failed",
         helptext="Unable to connect to the Wi-Fi network.",
     ),
+    "unknown_error": Screen(
+        icon="circle-exclamation-point",
+        title="Unknown error",
+        helptext="An unexpected error occurred.",
+    ),
 }
 
 DISPLAYS = {
@@ -76,6 +81,7 @@ DISPLAYS = {
             "server_unreachable",
             "server_error",
             "wifi_unavailable",
+            "unknown_error",
         ],
     ),
     "spectra6": Display(
@@ -88,6 +94,7 @@ DISPLAYS = {
             "server_unreachable",
             "server_error",
             "wifi_unavailable",
+            "unknown_error",
         ],
         scale=1.5,
         rotation=Image.Transpose.ROTATE_90,

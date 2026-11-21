@@ -7,16 +7,18 @@
 #include "png_decoder.h"
 #include "spectra6.h"
 
-// ESP-IDF EMBED_FILES places these compressed PNGs in flash (.rodata).
-// Paths in symbol names match main/CMakeLists.txt.
-extern const uint8_t error_wifi_png_start[] asm("_binary_error_wifi_png_start");
-extern const uint8_t error_wifi_png_end[] asm("_binary_error_wifi_png_end");
-extern const uint8_t error_http_png_start[] asm("_binary_error_http_png_start");
-extern const uint8_t error_http_png_end[] asm("_binary_error_http_png_end");
-extern const uint8_t error_image_png_start[] asm("_binary_error_image_png_start");
-extern const uint8_t error_image_png_end[] asm("_binary_error_image_png_end");
-extern const uint8_t error_battery_png_start[] asm("_binary_error_battery_png_start");
-extern const uint8_t error_battery_png_end[] asm("_binary_error_battery_png_end");
+extern const uint8_t low_battery_png_start[] asm("_binary_low_battery_png_start");
+extern const uint8_t low_battery_png_end[] asm("_binary_low_battery_png_end");
+extern const uint8_t image_decode_failed_png_start[] asm("_binary_image_decode_failed_png_start");
+extern const uint8_t image_decode_failed_png_end[] asm("_binary_image_decode_failed_png_end");
+extern const uint8_t server_unreachable_png_start[] asm("_binary_server_unreachable_png_start");
+extern const uint8_t server_unreachable_png_end[] asm("_binary_server_unreachable_png_end");
+extern const uint8_t server_error_png_start[] asm("_binary_server_error_png_start");
+extern const uint8_t server_error_png_end[] asm("_binary_server_error_png_end");
+extern const uint8_t wifi_unavailable_png_start[] asm("_binary_wifi_unavailable_png_start");
+extern const uint8_t wifi_unavailable_png_end[] asm("_binary_wifi_unavailable_png_end");
+extern const uint8_t unknown_error_png_start[] asm("_binary_unknown_error_png_start");
+extern const uint8_t unknown_error_png_end[] asm("_binary_unknown_error_png_end");
 
 namespace {
 constexpr char TAG[] = "error_screen";
@@ -29,16 +31,21 @@ struct EmbeddedPng {
 
 EmbeddedPng get_error_png(ErrorScreenKind kind) {
     switch (kind) {
-    case ErrorScreenKind::Wifi:
-        return {error_wifi_png_start, error_wifi_png_end};
-    case ErrorScreenKind::Http:
-        return {error_http_png_start, error_http_png_end};
-    case ErrorScreenKind::Image:
-        return {error_image_png_start, error_image_png_end};
-    case ErrorScreenKind::Battery:
-        return {error_battery_png_start, error_battery_png_end};
+    case ErrorScreenKind::None:
+        return {unknown_error_png_start, unknown_error_png_end};
+    case ErrorScreenKind::WifiUnavailable:
+        return {wifi_unavailable_png_start, wifi_unavailable_png_end};
+    case ErrorScreenKind::ServerUnreachable:
+        return {server_unreachable_png_start, server_unreachable_png_end};
+    case ErrorScreenKind::ServerUnexpectedReponse:
+        return {server_error_png_start, server_error_png_end};
+    case ErrorScreenKind::ImageDecodeFailed:
+        return {image_decode_failed_png_start, image_decode_failed_png_end};
+    case ErrorScreenKind::LowBattery:
+        return {low_battery_png_start, low_battery_png_end};
     }
-    return {error_http_png_start, error_http_png_end};
+
+    return {unknown_error_png_start, unknown_error_png_end};
 }
 } // namespace
 

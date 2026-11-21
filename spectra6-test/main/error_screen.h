@@ -3,10 +3,12 @@
 #include "esp_err.h"
 
 enum class ErrorScreenKind {
-    Wifi,
-    Http,
-    Image,
-    Battery,
+    None, // use as zero value in main.cpp
+    WifiUnavailable,
+    ServerUnreachable,
+    ServerUnexpectedReponse,
+    ImageDecodeFailed,
+    LowBattery,
 };
 
 // Draw a landscape 1600x1200 black/white error page on the native 1200x1600 panel.
