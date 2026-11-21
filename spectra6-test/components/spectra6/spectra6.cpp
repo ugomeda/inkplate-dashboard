@@ -29,9 +29,6 @@ constexpr uint8_t DRF = 0x12;
 constexpr uint8_t POF = 0x02;
 constexpr uint8_t DTM = 0x10;
 
-void delay_ms(uint32_t ms) {
-    vTaskDelay(pdMS_TO_TICKS(ms));
-}
 
 esp_err_t output_pin(int pin, int initial_level) {
     ESP_RETURN_ON_ERROR(gpio_reset_pin(static_cast<gpio_num_t>(pin)), TAG,
@@ -86,7 +83,7 @@ esp_err_t Spectra6::wait_ready(uint32_t timeout_ms) {
             ESP_LOGE(TAG, "BUSY timeout after %u ms", static_cast<unsigned>(timeout_ms));
             return ESP_ERR_TIMEOUT;
         }
-        delay_ms(10);
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
     return ESP_OK;
 }
@@ -100,7 +97,7 @@ esp_err_t Spectra6::init() {
     ESP_RETURN_ON_ERROR(output_pin(EPD_POWER, 1), TAG, "POWER");
     ESP_RETURN_ON_ERROR(gpio_set_direction(static_cast<gpio_num_t>(EPD_BUSY), GPIO_MODE_INPUT),
                         TAG, "BUSY");
-    delay_ms(100);
+    vTaskDelay(pdMS_TO_TICKS(100));
 
     spi_bus_config_t bus = {};
     bus.mosi_io_num = EPD_MOSI;
@@ -121,9 +118,9 @@ esp_err_t Spectra6::init() {
     spi_device_ = handle;
 
     gpio_set_level(static_cast<gpio_num_t>(EPD_RESET), 0);
-    delay_ms(20);
+    vTaskDelay(pdMS_TO_TICKS(20));
     gpio_set_level(static_cast<gpio_num_t>(EPD_RESET), 1);
-    delay_ms(20);
+    vTaskDelay(pdMS_TO_TICKS(20));
     ESP_RETURN_ON_ERROR(wait_ready(5000), TAG, "Panel not ready after reset");
 
     // T133A01 initialization in the order used by Seeed_GFX.
@@ -192,7 +189,8 @@ esp_err_t Spectra6::begin_image() {
     constexpr uint8_t ccset[] = {0x01};
     ESP_RETURN_ON_ERROR(send_command(Chip::Both, 0xE0, ccset, sizeof(ccset)), TAG, "CCSET");
     ESP_RETURN_ON_ERROR(wait_ready(5000), TAG, "BUSY before DTM");
-    delay_ms(10);
+    vTaskDelay(pdMS_TO_TICKS(10));
+
     return ESP_OK;
 }
 
@@ -201,27 +199,21 @@ esp_err_t Spectra6::refresh_image() {
     ESP_LOGI(TAG, "Panel power on");
     ESP_RETURN_ON_ERROR(send_command(Chip::Both, PON), TAG, "PON");
     ESP_RETURN_ON_ERROR(wait_ready(60000), TAG, "BUSY after PON");
-    delay_ms(30);
+    vTaskDelay(pdMS_TO_TICKS(30));
 
     constexpr uint8_t refresh_data[] = {0x00};
     ESP_LOGI(TAG, "Refreshing (~30s)");
     ESP_RETURN_ON_ERROR(send_command(Chip::Both, DRF, refresh_data, sizeof(refresh_data)), TAG, "DRF");
     ESP_RETURN_ON_ERROR(wait_ready(60000), TAG, "BUSY after DRF");
-    delay_ms(30);
+    vTaskDelay(pdMS_TO_TICKS(30));
 
     constexpr uint8_t power_off_data[] = {0x00};
     ESP_RETURN_ON_ERROR(send_command(Chip::Both, POF, power_off_data, sizeof(power_off_data)), TAG, "POF");
     ESP_RETURN_ON_ERROR(wait_ready(30000), TAG, "BUSY after POF");
-    delay_ms(30);
+    vTaskDelay(pdMS_TO_TICKS(30));
     ESP_LOGI(TAG, "Refresh completed");
-    return ESP_OK;
-}
 
-esp_err_t Spectra6::show_test_bars() {
-    ESP_RETURN_ON_ERROR(begin_image(), TAG, "Prepare image");
-    ESP_RETURN_ON_ERROR(stream_test_half(Chip::Master, 0), TAG, "Master image write");
-    ESP_RETURN_ON_ERROR(stream_test_half(Chip::Slave, WIDTH / 2), TAG, "Slave image write");
-    return refresh_image();
+    return ESP_OK;
 }
 
 esp_err_t Spectra6::stream_indexed_half(
@@ -280,7 +272,7 @@ esp_err_t Spectra6::show_indexed_image(
 esp_err_t Spectra6::sleep() {
     constexpr uint8_t sleep_data[] = {0xA5};
     ESP_RETURN_ON_ERROR(send_command(Chip::Master, 0x07, sleep_data, sizeof(sleep_data)), TAG, "Sleep command");
-    delay_ms(1);
+    vTaskDelay(pdMS_TO_TICKS(1));
     ESP_RETURN_ON_ERROR(gpio_set_level(static_cast<gpio_num_t>(EPD_POWER), 0), TAG, "Power off");
     return ESP_OK;
 }

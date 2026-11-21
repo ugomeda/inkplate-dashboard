@@ -9,7 +9,7 @@ menu "Dashboard configuration"
 
     config DASHBOARD_URL
         string "PNG URL"
-        default "http://192.168.101.13:8000/live/png"
+        default "http://192.168.0.1:8000/live/display_1/png"
 
     config DASHBOARD_LOW_BATTERY_MV
         int "Low-battery cutoff (millivolts)"

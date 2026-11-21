@@ -10,7 +10,6 @@ public:
     static constexpr int HEIGHT = 1600;
 
     esp_err_t init();
-    esp_err_t show_test_bars();
 
     // Raw, unfiltered PNG palette indices (4 or 8 bits per pixel).
     // palette_to_hw maps an index to a T133A01 color code.
