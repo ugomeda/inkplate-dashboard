@@ -15,33 +15,34 @@ from inkplate_dashboard.displays import Display
 def _convert_image(screenshot: bytes, display: Display) -> tuple[bytes, str]:
     # Build a 256-color palette from the display configuration
     colors = [rgb for rgb, _ in display.palette]
-    palette_data = [channel for rgb in colors for channel in rgb]
+    codes = [code for _, code in display.palette]
 
+    palette_data = [channel for rgb in colors for channel in rgb]
     palette_img = Image.new("P", (1, 1))
     palette_img.putpalette((palette_data * (768 // len(palette_data) + 1))[:768])
 
     # Crop and quantize
     img = Image.open(io.BytesIO(screenshot)).convert("RGB")
     img = img.crop((0, 0, display.width, display.height))
-
     img = img.quantize(
         palette=palette_img,
         dither=Image.Dither.FLOYDSTEINBERG,
     )
 
-    # Normalize duplicated palette entries to 0..N-1
-    img.frombytes(bytes(index % len(colors) for index in img.tobytes()))
+    # Map quantized colors directly to hardware codes
+    img.frombytes(bytes(codes[index % len(codes)] for index in img.tobytes()))
 
-    # Preserve the output format expected by each display
-    if display.png_mode == "L":
-        img = img.convert("L")
+    # Rebuild the PNG palette to match those indices
+    png_palette = [0] * 768
+    for rgb, code in display.palette:
+        png_palette[code * 3 : code * 3 + 3] = rgb
+    img.putpalette(png_palette)
 
+    # Generate the image
     img = img.rotate(display.rotate, expand=True)
-
     hash_value = hashlib.sha256(img.tobytes()).hexdigest()
-
     output = io.BytesIO()
-    img.save(output, "PNG")
+    img.save(output, "PNG", bits=4, optimize=True)
 
     return output.getvalue(), hash_value
 
