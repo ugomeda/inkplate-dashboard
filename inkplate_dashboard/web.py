@@ -54,7 +54,7 @@ class DisplayPngEndpoint(HTTPEndpoint):
 
         headers = {
             "etag": etag,
-            "x-inkplate-next-refresh": str(next_refresh),
+            "x-display-next-refresh": str(next_refresh),
         }
 
         # Tell the display to avoid a refresh if the image did not change

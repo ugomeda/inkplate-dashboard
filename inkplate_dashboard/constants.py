@@ -6,4 +6,4 @@ FAKE_USER_AGENT = (
     "Safari/537.36"
 )
 
-BATTERY_HEADER = "X-Inkplate-Battery-Voltage"
+BATTERY_HEADER = "X-Display-Battery-Voltage"
