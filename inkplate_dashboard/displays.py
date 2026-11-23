@@ -21,7 +21,7 @@ DISPLAYS = {
         height=1200,
         weather_days=0,
         weather_hours=3,
-        rotate=0,
+        rotate=90,
         palette=[
             ((16, 16, 16), 0x0),
             ((48, 48, 48), 0x1),
