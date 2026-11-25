@@ -1,0 +1,19 @@
+menu "Dashboard configuration"
+    config DASHBOARD_WIFI_SSID
+        string "Wi-Fi SSID"
+        default ""
+
+    config DASHBOARD_WIFI_PASSWORD
+        string "Wi-Fi password"
+        default ""
+
+    config DASHBOARD_URL
+        string "PNG URL"
+        default "http://192.168.0.1:8000/live/display_1/png"
+
+    config DASHBOARD_LOW_BATTERY_MV
+        int "Low-battery level (millivolts)"
+        range 3000 4000
+        default 3400
+
+endmenu

@@ -1,0 +1,9 @@
+## IDF Component Manager Manifest File
+dependencies:
+  idf:
+    version: '>=4.1.0'
+  espressif/libpng: ^1.6.59~1
+  solderedelectronics/inkplate:
+    version: ">=1.0.0"
+    rules:
+    - if: "target == esp32"

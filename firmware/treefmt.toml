@@ -1,0 +1,6 @@
+excludes = ["managed_components/*", "build/*"]
+
+[formatter.clang-format]
+command = "clang-format"
+options = ["-i"]
+includes = ["*.c", "*.cpp", "*.h", "*.hpp"]

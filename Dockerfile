@@ -1,4 +1,4 @@
-ARG PYTHON_VERSION=3.13
+ARG PYTHON_VERSION=3.15
 
 FROM python:${PYTHON_VERSION}-slim-bookworm AS builder
 
@@ -15,6 +15,10 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 
 FROM python:${PYTHON_VERSION}-slim-bookworm AS runner
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libatomic1 \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 ENV PATH="/app/.venv/bin:$PATH"
