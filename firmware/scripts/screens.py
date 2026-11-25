@@ -83,13 +83,13 @@ DISPLAYS = {
     "inplate10": Display(
         width=825,
         height=1200,
-        output_path="../firmware/main/screens/inkplate10",
+        output_path="../main/screens/inkplate10",
         rotation=Image.Transpose.ROTATE_90,
     ),
     "spectra6": Display(
         width=1600,
         height=1200,
-        output_path="../firmware/main/screens/spectra6",
+        output_path="../main/screens/spectra6",
         scale=1.5,
         rotation=Image.Transpose.ROTATE_90,
     ),
