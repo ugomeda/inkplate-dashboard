@@ -1,0 +1,23 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "inkplate10",
+      "binaryDir": "build/inkplate10",
+      "cacheVariables": {
+        "IDF_TARGET": "esp32",
+        "SDKCONFIG": "sdkconfig.inkplate10",
+        "SDKCONFIG_DEFAULTS": "sdkconfig.defaults.inkplate10"
+      }
+    },
+    {
+      "name": "spectra6",
+      "binaryDir": "build/spectra6",
+      "cacheVariables": {
+        "IDF_TARGET": "esp32s3",
+        "SDKCONFIG": "sdkconfig.spectra6",
+        "SDKCONFIG_DEFAULTS": "sdkconfig.defaults.spectra6"
+      }
+    }
+  ]
+}
