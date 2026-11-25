@@ -9,7 +9,7 @@ constexpr size_t ETAG_BUFFER_SIZE = 128;
 
 struct DashboardImageRequest {
     const char* url = nullptr;
-    uint16_t battery_mv = 0;
+    int battery_mv = 0;
     char etag[ETAG_BUFFER_SIZE] = {};
 
     uint8_t* response_data = nullptr;

@@ -35,7 +35,7 @@ RTC_DATA_ATTR BuiltinScreen displayed_builtin_screen = BuiltinScreen::None;
 RTC_DATA_ATTR char stored_etag[ETAG_BUFFER_SIZE] = {};
 RTC_DATA_ATTR bool battery_low_level = false;
 
-esp_err_t render_png(const uint8_t* png_data, int size, bool bw = false) {
+esp_err_t render_png(const uint8_t* png_data, int size) {
     const DisplayInfo display = display_info();
     indexed_png_t image = {};
     esp_err_t err = decode_indexed_png(png_data, size, &image, display.width, display.height);
@@ -69,12 +69,12 @@ static void show_screen(BuiltinScreen screen, bool fast = false) {
     }
 }
 
-static void handle_wakeup() {
+static bool handle_wakeup() {
     const esp_sleep_wakeup_cause_t wakeup = esp_sleep_get_wakeup_cause();
     ESP_LOGI(TAG, "wakeup cause: %d", static_cast<int>(wakeup));
     if (wakeup == ESP_SLEEP_WAKEUP_EXT0) {
         ESP_LOGI(TAG, "Manual refresh requested (EE02 button 1)");
-        show_screen(BuiltinScreen::Updating, true);
+        return true;
     }
     if (wakeup != ESP_SLEEP_WAKEUP_TIMER && wakeup != ESP_SLEEP_WAKEUP_EXT0) {
         // Reset state following a cold boot, reset, or crash
@@ -83,6 +83,8 @@ static void handle_wakeup() {
         displayed_builtin_screen = BuiltinScreen::None;
         battery_low_level = false;
     }
+
+    return false;
 }
 
 static void initialize_nvram() {
@@ -122,7 +124,7 @@ static int update_battery_state() {
 
 extern "C" void app_main(void) {
     // Board initialization
-    handle_wakeup();
+    bool manual_wakeup = handle_wakeup();
     initialize_nvram();
 
     // Battery management
@@ -131,6 +133,11 @@ extern "C" void app_main(void) {
         show_screen(BuiltinScreen::LowBattery);
         display_enter_deep_sleep(ERROR_RETRY_SECONDS);
         return;
+    }
+
+    // Show pending update if user clicked on the button
+    if (manual_wakeup) {
+        show_screen(BuiltinScreen::Updating, true);
     }
 
     // Connect to wifi

@@ -240,6 +240,15 @@ esp_err_t spectra6_show_image(const uint8_t* pixels) {
     return spectra6_refresh_image();
 }
 
+void spectra6_cleanup() {
+    if (spi_device) {
+        spi_bus_remove_device(spi_device);
+        spi_device = nullptr;
+    }
+
+    spi_bus_free(SPI_HOST);
+}
+
 esp_err_t spectra6_sleep() {
     constexpr uint8_t sleep_data[] = {0xA5};
     const esp_err_t err = spectra6_send_command(Chip::Master, 0x07, sleep_data, sizeof(sleep_data));
@@ -265,6 +274,7 @@ esp_err_t display_render(const uint8_t* pixels) {
     ESP_RETURN_ON_ERROR(spectra6_init(), TAG, "Display initialization failed");
     const esp_err_t render_err = spectra6_show_image(pixels);
     const esp_err_t sleep_err = spectra6_sleep();
+    spectra6_cleanup();
 
     return render_err != ESP_OK ? render_err : sleep_err;
 }
