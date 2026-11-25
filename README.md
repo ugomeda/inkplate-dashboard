@@ -48,13 +48,39 @@ You should be able to access the dashboard on the following URLs:
 - Live HTML version: http://localhost:8000/live/html
 - Live PNG version: http://localhost:8000/live/png
 
-## ESP32 firmware
+## Firmware
 
-You will need [PlatformIO](https://platformio.org/) to compile
-and flash your Inkplate.
+The firmware is built with [ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/get-started/index.html) 6.1 and supports:
 
-- Create a `firmware/src/config.h` based on the `config.h.example` provided
-- Use `pio run -t upload` to flash the Inkplate from the `firmware` folder
+- Inkplate 10 V2
+- Spectra 6 (on Seeed Studio EE02)
+
+```bash
+cd firmware
+
+# for inkplate 10
+idf.py --preset inkplate10 menuconfig
+
+# for spectra6
+idf.py --preset spectra6 menuconfig
+```
+
+Under **Dashboard configuration**, configure:
+
+- Wi-Fi SSID
+- Wi-Fi password
+- PNG URL
+- Low-battery threshold
+
+Then flash your device:
+
+```bash
+# for inkplate10
+idf.py --preset inkplate10 build flash monitor
+
+# for spectra6
+idf.py --preset spectra6 build flash monitor
+```
 
 ## Assets
 
