@@ -6,8 +6,8 @@ An e-paper dashboard that displays news from RSS feeds and weather forecasts fro
 
 ## Supported hardware
 
-- **Inkplate 10 V2**
-- **Spectra 6 (Seeed Studio EE02)**
+- [Inkplate 10 V2](https://soldered.com/collections/fast-refresh-e-paper-modules/products/inkplate-10)
+- Spectra 6 ([Seeed Studio EE02](https://www.seeedstudio.com/XIAO-ePaper-Display-Board-ESP32-S3-EE02-p-6639.html))
 
 ## Server
 
