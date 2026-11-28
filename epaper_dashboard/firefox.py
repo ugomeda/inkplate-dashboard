@@ -63,8 +63,12 @@ class FirefoxInstance:
         )
         try:
             await page.goto(
-                f"http://127.0.0.1:8000/live/{display_id}/html", timeout=15000
+                f"http://127.0.0.1:8000/live/{display_id}/html",
+                wait_until="domcontentloaded",
+                timeout=15000,
             )
+
+            await page.evaluate("document.fonts.ready")
             screenshot = await page.screenshot()
         finally:
             await page.close()
