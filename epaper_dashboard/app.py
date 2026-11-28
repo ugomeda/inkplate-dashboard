@@ -2,6 +2,7 @@ import logging
 import sys
 
 from starlette.applications import Starlette
+from starlette.middleware.cors import CORSMiddleware
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 from uvicorn.logging import DefaultFormatter
@@ -17,7 +18,14 @@ from epaper_dashboard.web import (
 routes = [
     Route("/live/{display_id}/html", DisplayHtmlEndpoint, name="display_html"),
     Route("/live/{display_id}/png", DisplayPngEndpoint, name="display_png"),
-    Mount("/static", app=StaticFiles(packages=["epaper_dashboard"]), name="static"),
+    Mount(
+        "/static",
+        app=CORSMiddleware(
+            StaticFiles(packages=["epaper_dashboard"]),
+            allow_origins=["*"],
+        ),
+        name="static",
+    ),
 ]
 
 app = Starlette(routes=routes, lifespan=firefox_lifespan)
