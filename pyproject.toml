@@ -29,7 +29,7 @@ dev = [
 ]
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py313"
 extend-exclude = ["firmware"]
 
 [tool.ruff.lint]
@@ -52,7 +52,7 @@ select = [
 ignore = ["ISC001"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.13"
 strict = true
 exclude = '^firmware/'
 
