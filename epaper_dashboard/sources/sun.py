@@ -5,8 +5,8 @@ from typing import Any, cast
 
 import requests
 
-from inkplate_dashboard.cache import AppCache, CacheNS
-from inkplate_dashboard.config import DisplayConfiguration
+from epaper_dashboard.cache import AppCache, CacheNS
+from epaper_dashboard.config import DisplayConfiguration
 
 SUNRISE_URL = "https://api.met.no/weatherapi/sunrise/3.0/sun"
 
@@ -38,7 +38,7 @@ def _cached_request(
         SUNRISE_URL,
         params=params,
         headers={
-            "User-Agent": "github.com/ugomeda/inkplate-dashboard",
+            "User-Agent": "github.com/ugomeda/epaper-dashboard",
             "Accept": "application/json",
         },
         timeout=15,

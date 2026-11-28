@@ -3,10 +3,10 @@ from typing import cast
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
 
-from inkplate_dashboard.cache import AppCache
-from inkplate_dashboard.config import DisplayConfiguration
-from inkplate_dashboard.constants import BATTERY_HEADER
-from inkplate_dashboard.firefox import FirefoxInstance
+from epaper_dashboard.cache import AppCache
+from epaper_dashboard.config import DisplayConfiguration
+from epaper_dashboard.constants import BATTERY_HEADER
+from epaper_dashboard.firefox import FirefoxInstance
 
 
 def get_firefox(request: Request) -> FirefoxInstance:

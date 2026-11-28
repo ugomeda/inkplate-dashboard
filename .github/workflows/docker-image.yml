@@ -19,7 +19,7 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag ugomeda/inkplate-dashboard:latest
+      run: docker build . --file Dockerfile --tag ugomeda/epaper-dashboard:latest
     - name: Push the Docker image
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      run: docker push ugomeda/inkplate-dashboard:latest
+      run: docker push ugomeda/epaper-dashboard:latest

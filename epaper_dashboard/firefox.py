@@ -9,7 +9,7 @@ from PIL import Image
 from playwright.async_api import Browser, async_playwright
 from starlette.applications import Starlette
 
-from inkplate_dashboard.displays import Display
+from epaper_dashboard.displays import Display
 
 
 def _convert_image(screenshot: bytes, display: Display) -> tuple[bytes, str]:

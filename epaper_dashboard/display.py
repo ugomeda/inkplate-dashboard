@@ -3,13 +3,13 @@ from datetime import datetime
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
-from inkplate_dashboard.cache import AppCache
-from inkplate_dashboard.config import DisplayConfiguration
-from inkplate_dashboard.displays import DISPLAYS
-from inkplate_dashboard.sources.rss import Article, fetch_news
-from inkplate_dashboard.sources.sun import SunData, fetch_sun
-from inkplate_dashboard.sources.weather import WeatherData, get_weather
-from inkplate_dashboard.template import TemplateFilters
+from epaper_dashboard.cache import AppCache
+from epaper_dashboard.config import DisplayConfiguration
+from epaper_dashboard.displays import DISPLAYS
+from epaper_dashboard.sources.rss import Article, fetch_news
+from epaper_dashboard.sources.sun import SunData, fetch_sun
+from epaper_dashboard.sources.weather import WeatherData, get_weather
+from epaper_dashboard.template import TemplateFilters
 
 
 @dataclass
@@ -49,7 +49,7 @@ def generate_html(
 
     # Generate HTML
     env = Environment(
-        loader=PackageLoader("inkplate_dashboard", "templates"),
+        loader=PackageLoader("epaper_dashboard", "templates"),
         autoescape=select_autoescape(),
     )
     template = env.get_template(profile.template)

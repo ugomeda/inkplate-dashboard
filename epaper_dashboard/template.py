@@ -4,7 +4,7 @@ from datetime import datetime
 from babel import Locale
 from babel.dates import format_date, format_time
 
-from inkplate_dashboard.config import DisplayConfiguration, UnitEnum
+from epaper_dashboard.config import DisplayConfiguration, UnitEnum
 
 
 class TemplateFilters:
