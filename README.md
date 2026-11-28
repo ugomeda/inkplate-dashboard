@@ -2,7 +2,8 @@
 
 An e-paper dashboard that displays news from RSS feeds and weather forecasts from the [MET Norway Weather API](https://api.met.no/)
 
-![preview](./docs/preview.jpg)
+[![Spectra 6 preview](./docs/preview-spectra6-small.jpeg)](./docs/preview-spectra6.jpeg)
+[![Inkplate 10 preview](./docs/preview-inkplate10-small.jpeg)](./docs/preview-inkplate10.jpeg)
 
 ## Supported hardware
 
