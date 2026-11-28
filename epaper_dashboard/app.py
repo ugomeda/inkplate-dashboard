@@ -6,10 +6,10 @@ from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 from uvicorn.logging import DefaultFormatter
 
-from inkplate_dashboard.cache import AppCache
-from inkplate_dashboard.config import parse_config
-from inkplate_dashboard.firefox import firefox_lifespan
-from inkplate_dashboard.web import (
+from epaper_dashboard.cache import AppCache
+from epaper_dashboard.config import parse_config
+from epaper_dashboard.firefox import firefox_lifespan
+from epaper_dashboard.web import (
     DisplayHtmlEndpoint,
     DisplayPngEndpoint,
 )
@@ -17,7 +17,7 @@ from inkplate_dashboard.web import (
 routes = [
     Route("/live/{display_id}/html", DisplayHtmlEndpoint, name="display_html"),
     Route("/live/{display_id}/png", DisplayPngEndpoint, name="display_png"),
-    Mount("/static", app=StaticFiles(packages=["inkplate_dashboard"]), name="static"),
+    Mount("/static", app=StaticFiles(packages=["epaper_dashboard"]), name="static"),
 ]
 
 app = Starlette(routes=routes, lifespan=firefox_lifespan)
@@ -31,7 +31,7 @@ app.state.cache = AppCache(config.cache)
 # Configure logging
 handler = logging.StreamHandler(sys.stderr)
 handler.setFormatter(DefaultFormatter("%(levelprefix)s [%(name)s] %(message)s"))
-logger = logging.getLogger("inkplate_dashboard")
+logger = logging.getLogger("epaper_dashboard")
 logger.setLevel(logging.INFO)
 logger.addHandler(handler)
 logger.propagate = False

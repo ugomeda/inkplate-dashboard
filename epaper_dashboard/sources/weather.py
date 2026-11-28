@@ -5,8 +5,8 @@ from typing import Any, cast
 
 import requests
 
-from inkplate_dashboard.cache import AppCache, CacheNS
-from inkplate_dashboard.config import DisplayConfiguration
+from epaper_dashboard.cache import AppCache, CacheNS
+from epaper_dashboard.config import DisplayConfiguration
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +100,7 @@ def _load_weather(cache: AppCache, location: tuple[float, float]) -> dict[str, A
             "lon": round(location[1], 4),
         },
         headers={
-            "User-Agent": "github.com/ugomeda/inkplate-dashboard",
+            "User-Agent": "github.com/ugomeda/epaper-dashboard",
             "Accept": "application/json",
         },
         timeout=15,

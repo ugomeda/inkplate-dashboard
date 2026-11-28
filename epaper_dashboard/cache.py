@@ -4,7 +4,7 @@ from typing import Any, assert_never
 
 from diskcache import Cache
 
-from inkplate_dashboard.config import CacheConfiguration
+from epaper_dashboard.config import CacheConfiguration
 
 
 class CacheNS(StrEnum):

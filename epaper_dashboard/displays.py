@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from inkplate_dashboard.config import DisplayProfile
+from epaper_dashboard.config import DisplayProfile
 
 
 @dataclass

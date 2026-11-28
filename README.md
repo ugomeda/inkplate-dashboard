@@ -1,11 +1,13 @@
-inkplate-dashboard
-==================
+# epaper-dashboard
 
-Project to display a simple dashboard on an Inkplate 10 displaying articles
-from an RSS feed and the current weather, provided by the
-[MET Weather API](https://api.met.no/).
+An e-paper dashboard that displays news from RSS feeds and weather forecasts from the [MET Norway Weather API](https://api.met.no/)
 
 ![preview](./docs/preview.jpg)
+
+## Supported hardware
+
+- **Inkplate 10 V2**
+- **Spectra 6 (Seeed Studio EE02)**
 
 ## Server
 
@@ -13,7 +15,7 @@ The server generates the dashboard as an HTML page, uses Firefox to take a scree
 
 ### Docker quickstart
 
-A prebuilt image is available on [Docker Hub](https://hub.docker.com/r/ugomeda/inkplate-dashboard).
+A prebuilt image is available on [Docker Hub](https://hub.docker.com/r/ugomeda/epaper-dashboard).
 
 Create a configuration file from the example, then run the container:
 
@@ -24,7 +26,7 @@ docker run --rm \
     --pull always \
     -v "$(pwd)/config.toml:/app/config.toml:ro" \
     -p 8000:8000 \
-    ugomeda/inkplate-dashboard:latest
+    ugomeda/epaper-dashboard:latest
 ```
 
 ### Run locally
@@ -35,7 +37,7 @@ Install and run the server using [uv](https://docs.astral.sh/uv/):
 cp config.example.toml config.toml
 uv sync
 uv run playwright install firefox --with-deps
-uv run uvicorn inkplate_dashboard.app:app
+uv run uvicorn epaper_dashboard.app:app
 ```
 
 ### Access the dashboard
@@ -98,10 +100,7 @@ Optionally, you can add a `[cache]` section to override defaults. All TTL values
 
 ## Firmware
 
-The firmware is built with [ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/get-started/index.html) 6.1 and supports:
-
-- Inkplate 10 V2
-- Spectra 6 (on Seeed Studio EE02)
+The firmware is built with [ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/get-started/index.html) 6.1.
 
 ```bash
 cd firmware
@@ -117,7 +116,7 @@ Under **Dashboard configuration**, configure:
 
 - Wi-Fi SSID
 - Wi-Fi password
-- PNG URL: `http://<IP>/live/<display-id>/png`
+- PNG URL: `http://<IP>:8000/live/<display-id>/png`
 - Low-battery threshold
 
 Then flash your device:
@@ -131,8 +130,6 @@ idf.py --preset spectra6 build flash monitor
 ```
 
 ## Assets
-
-This projets uses:
 
 - Weather icons: https://github.com/nrkno/yr-weather-symbols
 - Icons: https://github.com/lucide-icons/lucide

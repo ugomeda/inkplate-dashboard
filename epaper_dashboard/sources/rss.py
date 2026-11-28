@@ -13,8 +13,8 @@ import trafilatura
 from bs4 import BeautifulSoup
 from playwright.sync_api import Browser, TimeoutError, sync_playwright
 
-from inkplate_dashboard.cache import AppCache, CacheNS
-from inkplate_dashboard.config import DisplayConfiguration, Feed
+from epaper_dashboard.cache import AppCache, CacheNS
+from epaper_dashboard.config import DisplayConfiguration, Feed
 
 logger = logging.getLogger(__name__)
 

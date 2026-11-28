@@ -6,10 +6,10 @@ from starlette.endpoints import HTTPEndpoint
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, PlainTextResponse, Response
 
-from inkplate_dashboard.constants import BATTERY_HEADER
-from inkplate_dashboard.display import generate_html
-from inkplate_dashboard.displays import DISPLAYS
-from inkplate_dashboard.utils import (
+from epaper_dashboard.constants import BATTERY_HEADER
+from epaper_dashboard.display import generate_html
+from epaper_dashboard.displays import DISPLAYS
+from epaper_dashboard.utils import (
     get_cache,
     get_display,
     get_firefox,

@@ -24,6 +24,6 @@ WORKDIR /app
 ENV PATH="/app/.venv/bin:$PATH"
 COPY --from=builder /app/.venv /app/.venv
 RUN python -m playwright install firefox --with-deps
-COPY inkplate_dashboard /app/inkplate_dashboard
+COPY epaper_dashboard /app/epaper_dashboard
 
-CMD ["python", "-m", "uvicorn", "inkplate_dashboard.app:app", "--host", "0.0.0.0"]
+CMD ["python", "-m", "uvicorn", "epaper_dashboard.app:app", "--host", "0.0.0.0"]
