@@ -5,6 +5,8 @@ An e-paper dashboard that displays news from RSS feeds and weather forecasts fro
 [![Spectra 6 preview](./docs/preview-spectra6-small.jpeg)](./docs/preview-spectra6.jpeg)
 [![Inkplate 10 preview](./docs/preview-inkplate10-small.jpeg)](./docs/preview-inkplate10.jpeg)
 
+The [enclosure for the Spectra6](./spectra6_enclosure.f3d) is published on [Printables.com](https://www.printables.com/model/1932725-enclosure-for-spectra-6-and-seeed-studio-ee02).
+
 ## Supported hardware
 
 - [Inkplate 10 V2](https://soldered.com/collections/fast-refresh-e-paper-modules/products/inkplate-10)
