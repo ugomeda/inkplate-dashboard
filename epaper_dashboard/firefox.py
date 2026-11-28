@@ -63,7 +63,7 @@ class FirefoxInstance:
         )
         try:
             await page.goto(
-                f"http://127.0.0.1:8000/live/{display_id}/html", timeout=10000
+                f"http://127.0.0.1:8000/live/{display_id}/html", timeout=15000
             )
             screenshot = await page.screenshot()
         finally:
