@@ -1,5 +1,6 @@
 import calendar
 import logging
+import math
 import re
 from dataclasses import dataclass
 from datetime import datetime, tzinfo
@@ -59,7 +60,9 @@ def _normalize_whitespace(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def _shorten_summary(text: str, min_words: int, max_words: int) -> str:
+def _shorten_summary(text: str, words_target: int) -> str:
+    max_words = math.ceil(words_target * 1.15)
+    min_words = math.floor(words_target * 0.85)
     text = _normalize_whitespace(text)
     if not text:
         return ""
@@ -112,7 +115,7 @@ def _rss_image(entry: dict[str, Any]) -> str | None:
 
 
 def _get_cached_rss_content(
-    cache: AppCache, feed: Feed
+    cache: AppCache, feed: Feed, user_agent: str
 ) -> tuple[bytes, dict[str, str]]:
     feed_url = str(feed.url)
     cached = cache.get(CacheNS.rss_feed, feed_url)
@@ -120,9 +123,7 @@ def _get_cached_rss_content(
         logger.info("using cache for %s", feed_url)
         return cast("tuple[bytes, dict[str, str]]", cached)
 
-    response = requests.get(
-        feed_url, timeout=15, headers={"User-Agent": feed.user_agent}
-    )
+    response = requests.get(feed_url, timeout=15, headers={"User-Agent": user_agent})
     response.raise_for_status()
     value = (response.content, dict(response.headers))
 
@@ -144,9 +145,9 @@ def _rss_language(feed: Any, entry: dict[str, Any]) -> str | None:
 
 
 def _load_rss_feed(
-    cache: AppCache, config: DisplayConfiguration, feed: Feed
+    cache: AppCache, config: DisplayConfiguration, feed: Feed, user_agent: str
 ) -> list[RSSArticle]:
-    content, headers = _get_cached_rss_content(cache, feed)
+    content, headers = _get_cached_rss_content(cache, feed, user_agent)
     rss_content = feedparser.parse(content, response_headers=headers)
 
     return [
@@ -200,7 +201,7 @@ def _page_get_favicon(base_url: str, page: BeautifulSoup) -> str | None:
 def _page_extract_text(config: Feed, html: str, url: str) -> str:
     page = BeautifulSoup(html, "html.parser")
 
-    for selector in config.ignore_elements:
+    for selector in config.ignored_elements:
         for element in page.select(selector):
             element.decompose()
 
@@ -243,7 +244,9 @@ def _page_get_html(cache: AppCache, browser: Browser, url: str, locale: str) -> 
     return html
 
 
-def _load_image(cache: AppCache, feed: Feed, url: str | None) -> bytes | None:
+def _load_image(
+    cache: AppCache, feed: Feed, url: str | None, user_agent: str
+) -> bytes | None:
     if url is None:
         return None
 
@@ -252,7 +255,7 @@ def _load_image(cache: AppCache, feed: Feed, url: str | None) -> bytes | None:
         logger.info("used cache for image %s", url)
         return cast("bytes", cached)
 
-    req = requests.get(url, timeout=15, headers={"User-Agent": feed.user_agent})
+    req = requests.get(url, timeout=15, headers={"User-Agent": user_agent})
     req.raise_for_status()
 
     cache.set(CacheNS.rss_image, url, req.content)
@@ -265,6 +268,8 @@ def render_article(
     browser: Browser,
     cache: AppCache,
     rss_article: RSSArticle,
+    user_agent: str,
+    words_target: int,
 ) -> Article:
     try:
         html = _page_get_html(cache, browser, rss_article.url, config.locale)
@@ -293,11 +298,9 @@ def render_article(
         return Article(
             title=title or "",
             website=website or "",
-            image=_load_image(cache, feed, image),
-            favicon=_load_image(cache, feed, favicon),
-            summary=_shorten_summary(
-                text, feed.summary_words[0], feed.summary_words[1]
-            ),
+            image=_load_image(cache, feed, image, user_agent),
+            favicon=_load_image(cache, feed, favicon, user_agent),
+            summary=_shorten_summary(text, words_target),
             published_at=rss_article.published_at,
             language=rss_article.language,
         )
@@ -308,11 +311,9 @@ def render_article(
         return Article(
             title=rss_article.title,
             website=rss_article.website,
-            image=_load_image(cache, feed, rss_article.image),
+            image=_load_image(cache, feed, rss_article.image, user_agent),
             favicon=None,
-            summary=_shorten_summary(
-                rss_article.summary, feed.summary_words[0], feed.summary_words[1]
-            ),
+            summary=_shorten_summary(rss_article.summary, words_target),
             published_at=rss_article.published_at,
             language=rss_article.language,
         )
@@ -326,14 +327,24 @@ def fetch_news(cache: AppCache, config: DisplayConfiguration) -> list[Article]:
 
         try:
             for feed in config.feeds:
-                articles = _load_rss_feed(cache, config, feed)
+                articles = _load_rss_feed(cache, config, feed, config.news_user_agent)
                 if not articles:
                     raise RuntimeError(f"No articles found in {feed.url}")
 
                 article = next(
                     article for article in articles if _filter_rss_article(article)
                 )
-                result.append(render_article(config, feed, browser, cache, article))
+                result.append(
+                    render_article(
+                        config,
+                        feed,
+                        browser,
+                        cache,
+                        article,
+                        config.news_user_agent,
+                        config.news_summary_words,
+                    )
+                )
         finally:
             browser.close()
 
