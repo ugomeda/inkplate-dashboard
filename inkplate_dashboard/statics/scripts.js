@@ -51,7 +51,7 @@ function fitNewsColumn(newsColumnSelector) {
     const column = document.querySelector(newsColumnSelector);
     const articles = column.querySelectorAll("article");
 
-    for (let size = 30; size >= 14; size -= 0.25) {
+    for (let size = 35; size >= 14; size -= 0.25) {
         column.style.fontSize = `${size}px`;
         articles.forEach(alignImageToLineGrid);
         if (column.scrollHeight <= column.clientHeight) {

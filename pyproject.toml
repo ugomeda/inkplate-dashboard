@@ -30,6 +30,7 @@ dev = [
 
 [tool.ruff]
 target-version = "py311"
+extend-exclude = ["firmware"]
 
 [tool.ruff.lint]
 select = [
@@ -53,6 +54,7 @@ ignore = ["ISC001"]
 [tool.mypy]
 python_version = "3.11"
 strict = true
+exclude = '^firmware/'
 
 [[tool.mypy.overrides]]
 module = ["diskcache", "diskcache.*"]

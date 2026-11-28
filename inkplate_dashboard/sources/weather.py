@@ -140,10 +140,10 @@ def get_weather(
                     timeseries[
                         start_index
                         + 1
-                        + hourly_index * config.weather_hours_interval
+                        + hourly_index * config.weather_forecast_step_hours
                         + hour
                     ]
-                    for hour in range(config.weather_hours_interval)
+                    for hour in range(config.weather_forecast_step_hours)
                 ],
                 tz,
             )

@@ -1,22 +1,38 @@
-[cache]
-path = ".cache"
-
-[display]
+[displays.display_1]
+profile = "spectra6"
 location = [40.75, -73.99]
 timezone = "America/New_York"
 locale = "en_US"
 units = "imperial"
 refresh_interval_sec = 1800  # refresh every 30 minutes
-weather_hours_interval = 4
+weather_forecast_step_hours = 4
+news_summary_words = 90
+news_user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:158.0) Gecko/20100101 Firefox/158.0"
 
-[[display.feeds]]
+[[displays.display_1.feeds]]
 url = "https://feeds.bbci.co.uk/news/world/rss.xml"
-summary_words = [50, 70]
-ignore_elements = [".visually-hidden"]
-user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:158.0) Gecko/20100101 Firefox/158.0"
+ignored_elements = [".visually-hidden"]
 
-[[display.feeds]]
+[[displays.display_1.feeds]]
 url = "https://www.france24.com/en/france/rss"
-summary_words = [50, 70]
-ignore_elements = ["#didomi-host", "h1"]
-user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:158.0) Gecko/20100101 Firefox/158.0"
+ignored_elements = ["#didomi-host", "h1"]
+
+
+[displays.display_2]
+profile = "inkplate10"
+location = [40.75, -73.99]
+timezone = "America/New_York"
+locale = "en_US"
+units = "imperial"
+refresh_interval_sec = 1800  # refresh every 30 minutes
+weather_forecast_step_hours = 4
+news_summary_words = 60
+news_user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:158.0) Gecko/20100101 Firefox/158.0"
+
+[[displays.display_2.feeds]]
+url = "https://feeds.bbci.co.uk/news/world/rss.xml"
+ignored_elements = [".visually-hidden"]
+
+[[displays.display_2.feeds]]
+url = "https://www.france24.com/en/france/rss"
+ignored_elements = ["#didomi-host", "h1"]

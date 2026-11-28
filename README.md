@@ -9,44 +9,92 @@ from an RSS feed and the current weather, provided by the
 
 ## Server
 
-The server generates the dashboard as an HTML page, and uses Firefox to
-screenshot it and generate a PNG which can be sent to the Inkplate 10.
+The server generates the dashboard as an HTML page, uses Firefox to take a screenshot, and converts it into a PNG image that can be sent to the display.
 
 ### Docker quickstart
 
-An image is provided on [dockerhub](https://hub.docker.com/r/ugomeda/inkplate-dashboard):
+A prebuilt image is available on [Docker Hub](https://hub.docker.com/r/ugomeda/inkplate-dashboard).
 
-```
-docker run \
+Create a configuration file from the example, then run the container:
+
+```bash
+cp config.example.toml config.toml
+
+docker run --rm \
     --pull always \
-    -v $(pwd)/config.example.toml:/app/config.toml:ro \
+    -v "$(pwd)/config.toml:/app/config.toml:ro" \
     -p 8000:8000 \
     ugomeda/inkplate-dashboard:latest
 ```
 
-Then access:
-
-- Live HTML version: http://localhost:8000/live/html
-- Live PNG version: http://localhost:8000/live/png
-
 ### Run locally
 
-To run the server:
+Install and run the server using [uv](https://docs.astral.sh/uv/):
 
-- Create a stub configuration by copying `config.example.toml` to `config.toml`
-- Install Firefox
-- Run the application
-
-```
-cp config.exemple.toml config.toml
+```bash
+cp config.example.toml config.toml
+uv sync
 uv run playwright install firefox --with-deps
 uv run uvicorn inkplate_dashboard.app:app
 ```
 
-You should be able to access the dashboard on the following URLs:
+### Access the dashboard
 
-- Live HTML version: http://localhost:8000/live/html
-- Live PNG version: http://localhost:8000/live/png
+Once the server is running, the following endpoints are available:
+
+**Live HTML:**
+- [http://localhost:8000/live/display_1/html](http://localhost:8000/live/display_1/html)
+- [http://localhost:8000/live/display_2/html](http://localhost:8000/live/display_2/html)
+
+**Generated PNG:**
+- [http://localhost:8000/live/display_1/png](http://localhost:8000/live/display_1/png)
+- [http://localhost:8000/live/display_2/png](http://localhost:8000/live/display_2/png)
+
+The display IDs correspond to those defined in `config.toml`.
+
+### Configuration file
+
+The server supports several displays, where each display has its own configuration containing its hardware profile, location, weather forecast, and RSS feeds.
+
+See [config.example.toml](./config.example.toml) for an example.
+
+#### Display settings
+
+Each display is defined under `[displays.<id>]`.
+
+| Setting | Description |
+|---|---|
+| `profile` | Hardware profile: `inkplate10` or `spectra6` |
+| `location` | Geographic coordinates as `[latitude, longitude]` |
+| `timezone` | IANA timezone, e.g. `Europe/Paris` |
+| `locale` | Locale used, e.g. `fr_FR` |
+| `units` | Measurement units: `metric` or `imperial` |
+| `refresh_interval_sec` | Time between dashboard refreshes, in seconds |
+| `weather_forecast_step_hours` | Interval, in hours, between weather icons in the forecast (default: `4`) |
+| `news_user_agent` | HTTP User-Agent used for fetching news, mostly used to circumvent bot protections on some RSS feeds |
+| `news_summary_words` | Target number of words in article summaries (±15%) |
+
+#### Feeds settings
+
+Each display can have multiple `[[displays.<id>.feeds]]` entries.
+
+| Feed setting | Description |
+|---|---|
+| `url` | RSS feed URL (HTTP or HTTPS) |
+| `ignored_elements` | List of CSS selectors identifying elements to exclude from the article content |
+
+#### Cache settings
+
+Optionally, you can add a `[cache]` section to override defaults. All TTL values are expressed in seconds.
+
+| Setting | Default | Description |
+|---|---:|---|
+| `path` | `.cache` | Cache directory |
+| `weather_ttl` | `6600` | Weather forecast cache lifetime |
+| `sun_ttl` | `172800` | Sunrise and sunset data cache lifetime |
+| `rss_feed_ttl` | `1800` | RSS feed cache lifetime |
+| `rss_article_ttl` | `7200` | Article content cache lifetime |
+| `rss_image_ttl` | `7200` | Article image cache lifetime |
 
 ## Firmware
 
@@ -69,7 +117,7 @@ Under **Dashboard configuration**, configure:
 
 - Wi-Fi SSID
 - Wi-Fi password
-- PNG URL
+- PNG URL: `http://<IP>/live/<display-id>/png`
 - Low-battery threshold
 
 Then flash your device:
