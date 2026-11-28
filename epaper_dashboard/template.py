@@ -12,11 +12,14 @@ class TemplateFilters:
         self.locale = config.locale.replace("-", "_")
         self.units = config.units
 
-    def temperature(self, value: float) -> str:
+    def temperature(self, value: float, raw: bool = False) -> str:
         if self.units == UnitEnum.imperial:
             value = (9 / 5) * value + 32
 
-        return f"{round(value)}°"
+        if raw:
+            return str(round(value, ndigits=2))
+        else:
+            return f"{round(value)}°"
 
     def wind_speed(self, value: float) -> str:
         if self.units == UnitEnum.imperial:
