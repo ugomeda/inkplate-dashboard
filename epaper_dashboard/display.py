@@ -23,7 +23,10 @@ class EpaperContext:
 
 
 def generate_html(
-    app_cache: AppCache, display: DisplayConfiguration, voltage: float | None
+    app_cache: AppCache,
+    display: DisplayConfiguration,
+    voltage: float | None,
+    base_url: str | None = None,
 ) -> str:
     profile = DISPLAYS[display.profile]
     now = datetime.now(tz=display.tz())
@@ -56,6 +59,7 @@ def generate_html(
 
     return template.render(
         filters=TemplateFilters(display),
+        base_url=base_url,
         data=EpaperContext(
             config=display,
             weather=weather,

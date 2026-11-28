@@ -6,7 +6,6 @@ from starlette.endpoints import HTTPEndpoint
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, PlainTextResponse, Response
 
-from epaper_dashboard.constants import BATTERY_HEADER
 from epaper_dashboard.display import generate_html
 from epaper_dashboard.displays import DISPLAYS
 from epaper_dashboard.utils import (
@@ -31,16 +30,20 @@ class DisplayHtmlEndpoint(HTTPEndpoint):
 
 class DisplayPngEndpoint(HTTPEndpoint):
     async def get(self, request: Request) -> Response:
-        display_id = request.path_params["display_id"]
-        display = get_display(request, display_id)
+        display = get_display(request, request.path_params["display_id"])
+
+        # Get the HTML content
+        html_content = await run_in_threadpool(
+            generate_html,
+            get_cache(request),
+            display,
+            get_voltage(request),
+            base_url="http://127.0.0.1:8000/",
+        )
 
         # Fetch the image
-        extra_headers = {}
-        if BATTERY_HEADER in request.headers:
-            extra_headers[BATTERY_HEADER] = request.headers[BATTERY_HEADER]
-
         image, etag = await get_firefox(request).screenshot(
-            display_id, DISPLAYS[display.profile], extra_headers=extra_headers
+            DISPLAYS[display.profile], html_content
         )
 
         # Caculate the next refresh, we want to force an update a bit

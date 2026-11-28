@@ -52,22 +52,13 @@ class FirefoxInstance:
     browser: Browser
 
     async def screenshot(
-        self,
-        display_id: str,
-        display: Display,
-        extra_headers: dict[str, str] | None = None,
+        self, display: Display, html_content: str
     ) -> tuple[bytes, str]:
         page = await self.browser.new_page(
-            viewport={"width": display.width, "height": display.height},
-            extra_http_headers=extra_headers,
+            viewport={"width": display.width, "height": display.height}
         )
         try:
-            await page.goto(
-                f"http://127.0.0.1:8000/live/{display_id}/html",
-                wait_until="domcontentloaded",
-                timeout=15000,
-            )
-
+            await page.set_content(html_content, timeout=5000)
             await page.evaluate("document.fonts.ready")
             screenshot = await page.screenshot()
         finally:
